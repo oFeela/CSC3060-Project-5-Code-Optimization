@@ -18,7 +18,7 @@ target_include_directories(kernels
 
 target_compile_options(kernels
     PRIVATE
-        -ffast-math -O2 -Wall -g -fno-omit-frame-pointer
+        -ffast-math -Wall -g -fno-omit-frame-pointer -O3 -march=native -fprefetch-loop-arrays
 )
 target_include_directories(kernels PUBLIC include)
 

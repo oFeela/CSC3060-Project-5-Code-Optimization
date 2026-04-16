@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <random>
+#include <thread>
 
 void initialize_relu(relu_args *args, const size_t size,
                      const std::uint_fast64_t seed) {
@@ -32,11 +33,8 @@ void naive_relu(std::span<float> data) {
 
 void stu_relu(std::span<float> data) {
     // TODO: Implement your version, and call it in stu_relu_wrapper
+    // TODO: try MULTITHREADING ALSO
     for (float& val : data) {
-        // 0b0.... >- 0, want res this
-        // 0b1.... < 0 want res to be zero
-        // 0b0110 >= 0
-        // 0b0110 >> 3 = 0b0000. negate 0b1111
         // x & ~(x >> 31) = x
         // 0b1110 < 0, for x < 0, 0b1110 >> 3 = 0b1111, negate it and becomes 0b0000
         // x & ~(x >> 31) = 0

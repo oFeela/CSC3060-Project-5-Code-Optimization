@@ -55,9 +55,53 @@ void naive_bitwise(std::span<std::int8_t> result,
 }
 
 // TODO: Optimize the bitwise function
+// TODO: TRY SIMD WITH HIGHER COUNT
+// TODO: TRY MULTITHREADING SINCE DATA IS INDEPENDENT, NO RACING CONDS
 void stu_bitwise(std::span<std::int8_t> result, std::span<const std::int8_t> a,
                  std::span<const std::int8_t> b) {
     // Implement your version...
+    constexpr std::uint64_t kMaskLoP = 0x5A5A5A5A5A5A5A5Au;
+    constexpr std::uint64_t kMaskHiP = 0xC3C3C3C3C3C3C3C3u;
+    const std::size_t n = std::min({result.size(), a.size(), b.size()});
+
+    // explicit call for prefetch: __builtin_prefetch(addr, rw, locality)
+    // loops prefetch alr done by the flag in CMakeLists.txt
+    std::size_t i = 0;
+    for (; i + 7 < n; i += 8) {
+        std::uint64_t ap, bp;
+        // get four elements starting from curr
+        memcpy(&ap, &a[i], 8);
+        memcpy(&bp, &b[i], 8);
+
+        std::uint64_t shared = ap & bp;
+        std::uint64_t either = ap | bp;
+        std::uint64_t diff = ap ^ bp;
+        std::uint64_t mixed0 = (diff & kMaskLoP) | (~shared & ~kMaskLoP);
+        std::uint64_t mixed1 = ((either ^ kMaskHiP) & (shared | ~kMaskHiP)) ^ diff;
+        
+        std::uint64_t res = mixed0 ^ mixed1;
+
+        memcpy(&result[i], &res, 8);
+    }
+
+    // leftovers
+    constexpr std::uint8_t kMaskLo = 0x5Au;
+    constexpr std::uint8_t kMaskHi = 0xC3u;
+
+    for (; i < n; i++) {
+        const auto ua = static_cast<std::uint8_t>(a[i]);
+        const auto ub = static_cast<std::uint8_t>(b[i]);
+
+        const auto shared = static_cast<std::uint8_t>(ua & ub);
+        const auto either = static_cast<std::uint8_t>(ua | ub);
+        const auto diff = static_cast<std::uint8_t>(ua ^ ub);
+        const auto mixed0 =
+            static_cast<std::uint8_t>((diff & kMaskLo) | (~shared & ~kMaskLo));
+        const auto mixed1 = static_cast<std::uint8_t>(
+            ((either ^ kMaskHi) & (shared | ~kMaskHi)) ^ diff);
+
+        result[i] = static_cast<std::int8_t>(mixed0 ^ mixed1);
+    }
 }
 
 void naive_bitwise_wrapper(void *ctx) {
