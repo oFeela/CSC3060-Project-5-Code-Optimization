@@ -44,14 +44,17 @@ void stu_relu(std::span<float> data) {
         // typecast as a pointer to int32_t
         // dereference it --> get int32_t
 
-        // int32_t& bit_val = *(int32_t*)&val; 
-        // bit_val &= ~(bit_val >> 31);
+        /*
+        This one also okay with flags on
+        */
+        int32_t& bit_val = *(int32_t*)&val; 
+        bit_val &= ~(bit_val >> 31);
 
         /*
         Fastest for now! (below BASELINE)
         TODO: OPTIMIZE MORE, SIMD maybe?
         */
-        val = std::max(0.0f, val);
+        // val = std::max(0.0f, val);
     }
 }
 

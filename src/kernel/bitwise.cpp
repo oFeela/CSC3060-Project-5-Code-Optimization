@@ -4,6 +4,7 @@
 #include <cstring>
 #include <limits>
 #include <random>
+#include <immintrin.h>
 
 void initialize_bitwise(bitwise_args *args, const size_t size,
                                   const std::uint_fast64_t seed) {
@@ -60,35 +61,14 @@ void naive_bitwise(std::span<std::int8_t> result,
 void stu_bitwise(std::span<std::int8_t> result, std::span<const std::int8_t> a,
                  std::span<const std::int8_t> b) {
     // Implement your version...
-    constexpr std::uint64_t kMaskLoP = 0x5A5A5A5A5A5A5A5Au;
-    constexpr std::uint64_t kMaskHiP = 0xC3C3C3C3C3C3C3C3u;
     const std::size_t n = std::min({result.size(), a.size(), b.size()});
-
-    // explicit call for prefetch: __builtin_prefetch(addr, rw, locality)
-    // loops prefetch alr done by the flag in CMakeLists.txt
     std::size_t i = 0;
-    for (; i + 7 < n; i += 8) {
-        std::uint64_t ap, bp;
-        // get four elements starting from curr
-        memcpy(&ap, &a[i], 8);
-        memcpy(&bp, &b[i], 8);
 
-        std::uint64_t shared = ap & bp;
-        std::uint64_t either = ap | bp;
-        std::uint64_t diff = ap ^ bp;
-        std::uint64_t mixed0 = (diff & kMaskLoP) | (~shared & ~kMaskLoP);
-        std::uint64_t mixed1 = ((either ^ kMaskHiP) & (shared | ~kMaskHiP)) ^ diff;
-        
-        std::uint64_t res = mixed0 ^ mixed1;
-
-        memcpy(&result[i], &res, 8);
-    }
-
-    // leftovers
+    // naive one, but in fact it is preferred with flags on!
     constexpr std::uint8_t kMaskLo = 0x5Au;
     constexpr std::uint8_t kMaskHi = 0xC3u;
 
-    for (; i < n; i++) {
+    for (; i < n; ++i) {
         const auto ua = static_cast<std::uint8_t>(a[i]);
         const auto ub = static_cast<std::uint8_t>(b[i]);
 
@@ -99,6 +79,79 @@ void stu_bitwise(std::span<std::int8_t> result, std::span<const std::int8_t> a,
             static_cast<std::uint8_t>((diff & kMaskLo) | (~shared & ~kMaskLo));
         const auto mixed1 = static_cast<std::uint8_t>(
             ((either ^ kMaskHi) & (shared | ~kMaskHi)) ^ diff);
+
+        result[i] = static_cast<std::int8_t>(mixed0 ^ mixed1);
+    }
+
+    // explicit call for prefetch: __builtin_prefetch(addr, rw, locality)
+    // loops prefetch alr done by the flag in CMakeLists.txt
+
+    // 8 at a time
+    // constexpr std::uint64_t kMaskLoP = 0x5A5A5A5A5A5A5A5Au;
+    // constexpr std::uint64_t kMaskHiP = 0xC3C3C3C3C3C3C3C3u;
+    // for (; i + 7 < n; i += 8) {
+    //     std::uint64_t ap, bp;
+    //     // get four elements starting from curr
+    //     memcpy(&ap, &a[i], 8);
+    //     memcpy(&bp, &b[i], 8);
+
+    //     std::uint64_t shared = ap & bp;
+    //     std::uint64_t either = ap | bp;
+    //     std::uint64_t diff = ap ^ bp;
+    //     std::uint64_t mixed0 = (diff & kMaskLoP) | (~shared & ~kMaskLoP);
+    //     std::uint64_t mixed1 = ((either ^ kMaskHiP) & (shared | ~kMaskHiP)) ^ diff;
+        
+    //     std::uint64_t res = mixed0 ^ mixed1;
+
+    //     memcpy(&result[i], &res, 8);
+    // }
+
+    // 16 at a time
+    // NEVERMIND: SLOWER THAN 8 BITS WITH FLAGS ON
+    // __m128i mask_lo = _mm_set1_epi8(0x5A);
+    // __m128i mask_hi = _mm_set1_epi8(0xC3);
+    // for (size_t i = 0; i + 15 < n; i += 16) {
+    //     __m128i va = _mm_loadu_si128((__m128i*)(&a[i]));
+    //     __m128i vb = _mm_loadu_si128((__m128i*)(&b[i]));
+
+    //     __m128i shared = _mm_and_si128(va, vb);
+    //     __m128i either = _mm_or_si128(va, vb);
+    //     __m128i diff = _mm_xor_si128(va, vb);
+        
+    //     __m128i mask_lo = _mm_set1_epi8(0x5A);
+    //     __m128i mask_hi = _mm_set1_epi8(0xC3);
+        
+    //     __m128i mixed0 = _mm_or_si128(
+    //         _mm_and_si128(diff, mask_lo),
+    //         _mm_andnot_si128(shared, _mm_andnot_si128(mask_lo, _mm_set1_epi8(-1)))
+    //     );
+        
+    //     __m128i mixed1 = _mm_xor_si128(
+    //         _mm_and_si128(
+    //             _mm_xor_si128(either, mask_hi),
+    //             _mm_or_si128(shared, _mm_andnot_si128(mask_hi, _mm_set1_epi8(-1)))
+    //         ),
+    //         diff
+    //     );
+        
+    //     __m128i result_vec = _mm_xor_si128(mixed0, mixed1);
+    //     _mm_storeu_si128((__m128i*)(&result[i]), result_vec);
+    // }
+
+    // leftovers
+    constexpr std::uint8_t MaskLo = 0x5Au;
+    constexpr std::uint8_t MaskHi = 0xC3u;
+    for (; i < n; i++) {
+        const auto ua = static_cast<std::uint8_t>(a[i]);
+        const auto ub = static_cast<std::uint8_t>(b[i]);
+
+        const auto shared = static_cast<std::uint8_t>(ua & ub);
+        const auto either = static_cast<std::uint8_t>(ua | ub);
+        const auto diff = static_cast<std::uint8_t>(ua ^ ub);
+        const auto mixed0 =
+            static_cast<std::uint8_t>((diff & MaskLo) | (~shared & ~MaskLo));
+        const auto mixed1 = static_cast<std::uint8_t>(
+            ((either ^ MaskHi) & (shared | ~MaskHi)) ^ diff);
 
         result[i] = static_cast<std::int8_t>(mixed0 ^ mixed1);
     }
