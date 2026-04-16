@@ -32,7 +32,7 @@ void naive_relu(std::span<float> data) {
 
 void stu_relu(std::span<float> data) {
     // TODO: Implement your version, and call it in stu_relu_wrapper
-    for (auto &&val : data) {
+    for (float& val : data) {
         // 0b0.... >- 0, want res this
         // 0b1.... < 0 want res to be zero
         // 0b0110 >= 0
@@ -40,7 +40,13 @@ void stu_relu(std::span<float> data) {
         // x & ~(x >> 31) = x
         // 0b1110 < 0, for x < 0, 0b1110 >> 3 = 0b1111, negate it and becomes 0b0000
         // x & ~(x >> 31) = 0
-        val &= ~(val >> 31);
+        // val &= ~(val >> 31);
+
+        // get address where val is
+        // typecast as a pointer to int32_t
+        // dereference it --> get int32_t
+        int32_t& bit_val = *(int32_t*)&val; 
+        bit_val &= ~(bit_val >> 31);
     }
 }
 
