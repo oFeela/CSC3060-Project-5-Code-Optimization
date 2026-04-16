@@ -212,6 +212,13 @@ void csr_spmm(const CSRMatrix &csr, const std::vector<float> &dense_t,
     }
 }
 
+void csr_spmm_stu(const CSRMatrix &csr, const std::vector<float> &dense_t,
+              std::vector<float> &out) {
+
+    // TODO: implement it here!!!
+
+}
+
 void naive_sparse_spmm_wrapper(void *ctx) {
     auto &args = *static_cast<sparse_spmm_args *>(ctx);
     csr_spmm(args.csr, args.dense_t, args.out);
@@ -220,7 +227,7 @@ void naive_sparse_spmm_wrapper(void *ctx) {
 // TODO: Implement your version (e.g. stu_csr_spmm), and call it in stu_sparse_spmm_wrapper
 void stu_sparse_spmm_wrapper(void *ctx) {
     auto &args = *static_cast<sparse_spmm_args *>(ctx);
-    csr_spmm(args.csr, args.dense_t, args.out);
+    csr_spmm_stu(args.csr, args.dense_t, args.out);
 }
 
 bool sparse_spmm_check(void *stu_ctx, void *ref_ctx, lab_test_func naive_func) {

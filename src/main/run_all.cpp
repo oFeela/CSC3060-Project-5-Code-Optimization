@@ -26,11 +26,13 @@ int main() {
 
     blackscholes_args black_args;
     initialize_blackscholes(black_args, 81920, seed);
+    blackscholes_args black_args_stu = black_args;
     std::cout << "\tBlack-Scholes options: " << black_args.spot_price.size()
               << '\n';
 
     sparse_spmm_args sparse_args;
     initialize_spmm(sparse_args, 512, 512, -1, {}, seed);
+    sparse_spmm_args sparse_args_stu = sparse_args;
     std::cout << "\tSparse A (CSR): " << sparse_args.csr.rows << " x "
               << sparse_args.csr.cols
               << ", nnz=" << sparse_args.csr.values.size() << '\n';
@@ -38,19 +40,23 @@ int main() {
     constexpr size_t relu_size = 1024000;
     relu_args relu_args_naive;
     initialize_relu(&relu_args_naive, relu_size, seed);
+    relu_args relu_args_stu = relu_args_naive;
     std::println("\tReLU: vector length={}", relu_size);
 
     constexpr size_t bitwise_size = 1024000;
     bitwise_args bitwise_args_naive;
     initialize_bitwise(&bitwise_args_naive, bitwise_size, seed);
+    bitwise_args bitwise_args_stu = bitwise_args_naive;
     std::println("\tBitwise: vector length={}", bitwise_size);
 
     matmul_args matmul_args_naive;
     initialize_matmul(matmul_args_naive, 512, seed);
+    matmul_args matmul_args_stu = matmul_args_naive;
     std::cout << "\tMatMul: n=" << matmul_args_naive.n << '\n';
 
     trace_replay_args trace_args_naive;
     initialize_trace_replay(trace_args_naive, 1 << 16, 1 << 20, seed);
+    trace_replay_args trace_args_stu = trace_args_naive;
     std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
               << ", trace_length=" << trace_args_naive.trace.size() << '\n';
 
@@ -58,12 +64,14 @@ int main() {
     constexpr int graph_avg_degree = 8;
     graph_args graph_args_naive;
     initialize_graph(&graph_args_naive, graph_node_count, graph_avg_degree, seed);
+    graph_args graph_args_stu = graph_args_naive;
     std::cout << "\tGraph: node_count=" << graph_node_count
               << ", avg_degree=" << graph_avg_degree << '\n';
 
     constexpr std::size_t grff_size = 1024000;
     grff_args grff_args_naive;
     initialize_grff(&grff_args_naive, grff_size, seed);
+    grff_args grff_args_stu = grff_args_naive;
     std::cout << "\tGRFF: feature size=" << grff_args_naive.a_features.size()
               << '\n';
 
@@ -71,6 +79,7 @@ int main() {
     constexpr std::size_t image_height = 1000;
     image_proc_args image_args_naive;
     initialize_image_proc(&image_args_naive, image_width, image_height, seed);
+    image_proc_args image_args_stu = image_args_naive;
     std::cout << "\tImage Proc: " << image_args_naive.width << " x "
               << image_args_naive.height << '\n';
 
@@ -81,77 +90,148 @@ int main() {
                                WIDTH,
                                HEIGHT,
                                seed);
+    filter_gradient_args filter_gradient_args_stu = filter_gradient_args_ref;
     std::cout << "\tFilter Gradient: " << HEIGHT << " x " << WIDTH << '\n';
 
     std::vector<bench_t> benchmarks = {
-        {"Black-Scholes (Naive)",
-         naive_BlkSchls_wrapper,
+        // {"Black-Scholes (Naive)",
+        //  naive_BlkSchls_wrapper,
+        //  naive_BlkSchls_wrapper,
+        //  BlkSchls_check,
+        //  &black_args,
+        //  &black_args,
+        //  BASELINE_BLACKSCHOLES},
+        {"Black-Scholes (Optimized)",
+         stu_BlkSchls_wrapper,
          naive_BlkSchls_wrapper,
          BlkSchls_check,
-         &black_args,
+         &black_args_stu,
          &black_args,
          BASELINE_BLACKSCHOLES},
-        {"Sparse SpMM (Naive)",
-         naive_sparse_spmm_wrapper,
+        // {"Sparse SpMM (Naive)",
+        //  naive_sparse_spmm_wrapper,
+        //  naive_sparse_spmm_wrapper,
+        //  sparse_spmm_check,
+        //  &sparse_args,
+        //  &sparse_args,
+        //  BASELINE_SPARSE_SPMM},
+        {"Sparse SpMM (Optimized)",
+         stu_sparse_spmm_wrapper,
          naive_sparse_spmm_wrapper,
          sparse_spmm_check,
-         &sparse_args,
+         &sparse_args_stu,
          &sparse_args,
          BASELINE_SPARSE_SPMM},
-        {"ReLU (Naive)",
-         naive_relu_wrapper,
+        // {"ReLU (Naive)",
+        //  naive_relu_wrapper,
+        //  naive_relu_wrapper,
+        //  relu_check,
+        //  &relu_args_naive,
+        //  &relu_args_naive,
+        //  BASELINE_RELU},
+        {"ReLU (Optimized)",
+         stu_relu_wrapper,
          naive_relu_wrapper,
          relu_check,
-         &relu_args_naive,
+         &relu_args_stu,
          &relu_args_naive,
          BASELINE_RELU},
-        {"Bitwise (Naive)",
-         naive_bitwise_wrapper,
+        // {"Bitwise (Naive)",
+        //  naive_bitwise_wrapper,
+        //  naive_bitwise_wrapper,
+        //  bitwise_check,
+        //  &bitwise_args_naive,
+        //  &bitwise_args_naive,
+        //  BASELINE_BITWISE},
+        {"Bitwise (Optimized)",
+         stu_bitwise_wrapper,
          naive_bitwise_wrapper,
          bitwise_check,
-         &bitwise_args_naive,
+         &bitwise_args_stu,
          &bitwise_args_naive,
          BASELINE_BITWISE},
-        {"MatMul (Naive)",
-         naive_matmul_wrapper,
+        // {"MatMul (Naive)",
+        //  naive_matmul_wrapper,
+        //  naive_matmul_wrapper,
+        //  matmul_check,
+        //  &matmul_args_naive,
+        //  &matmul_args_naive,
+        //  BASELINE_MATMUL},
+        {"MatMul (Optimized)",
+         stu_matmul_wrapper,
          naive_matmul_wrapper,
          matmul_check,
-         &matmul_args_naive,
+         &matmul_args_stu,
          &matmul_args_naive,
          BASELINE_MATMUL},
-        {"Trace Replay (Naive)",
-         naive_trace_replay_wrapper,
+        // {"Trace Replay (Naive)",
+        //  naive_trace_replay_wrapper,
+        //  naive_trace_replay_wrapper,
+        //  trace_replay_check,
+        //  &trace_args_naive,
+        //  &trace_args_naive,
+        //  BASELINE_TRACE_REPLAY},
+        {"Trace Replay (Optimized)",
+         stu_trace_replay_wrapper,
          naive_trace_replay_wrapper,
          trace_replay_check,
-         &trace_args_naive,
+         &trace_args_stu,
          &trace_args_naive,
          BASELINE_TRACE_REPLAY},
-        {"Graph (Naive)",
-         naive_graph_wrapper,
+        // {"Graph (Naive)",
+        //  naive_graph_wrapper,
+        //  naive_graph_wrapper,
+        //  graph_check,
+        //  &graph_args_naive,
+        //  &graph_args_naive,
+        //  BASELINE_GRAPH},
+        {"Graph (Optimized)",
+         stu_graph_wrapper,
          naive_graph_wrapper,
          graph_check,
-         &graph_args_naive,
+         &graph_args_stu,
          &graph_args_naive,
          BASELINE_GRAPH},
-        {"GRFF (Naive)",
-         naive_grff_wrapper,
+        // {"GRFF (Naive)",
+        //  naive_grff_wrapper,
+        //  naive_grff_wrapper,
+        //  grff_check,
+        //  &grff_args_naive,
+        //  &grff_args_naive,
+        //  BASELINE_GRFF},
+        {"GRFF (Optimized)",
+         stu_grff_wrapper,
          naive_grff_wrapper,
          grff_check,
-         &grff_args_naive,
+         &grff_args_stu,
          &grff_args_naive,
          BASELINE_GRFF},
-        {"Image Proc (Naive)",
-         naive_image_proc_wrapper,
+        // {"Image Proc (Naive)",
+        //  naive_image_proc_wrapper,
+        //  naive_image_proc_wrapper,
+        //  image_proc_check,
+        //  &image_args_naive,
+        //  &image_args_naive,
+        //  BASELINE_IMAGE_PROC},
+        {"Image Proc (Optimized)",
+         stu_image_proc_wrapper,
          naive_image_proc_wrapper,
          image_proc_check,
-         &image_args_naive,
+         &image_args_stu,
          &image_args_naive,
          BASELINE_IMAGE_PROC},
-        {"Filter Gradient (Naive)",
-         naive_filter_gradient_wrapper,
+        // {"Filter Gradient (Naive)",
+        //  naive_filter_gradient_wrapper,
+        //  naive_filter_gradient_wrapper,
+        //  filter_gradient_check,
+        //  &filter_gradient_args_ref,
+        //  &filter_gradient_args_ref,
+        //  BASELINE_FILTER_GRADIENT}};
+        {"Filter Gradient (Optimized)",
+         stu_filter_gradient_wrapper,
          naive_filter_gradient_wrapper,
          filter_gradient_check,
-         &filter_gradient_args_ref,
+         &filter_gradient_args_stu,
          &filter_gradient_args_ref,
          BASELINE_FILTER_GRADIENT}};
 
