@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <random>
-#include <thread>
+#include <bit>
 
 void initialize_relu(relu_args *args, const size_t size,
                      const std::uint_fast64_t seed) {
@@ -34,7 +34,8 @@ void naive_relu(std::span<float> data) {
 void stu_relu(std::span<float> data) {
     // TODO: Implement your version, and call it in stu_relu_wrapper
     // TODO: try MULTITHREADING ALSO
-    for (float& val : data) {
+    size_t n = data.size();
+    for (size_t i = 0; i < n; i++) {
         // x & ~(x >> 31) = x
         // 0b1110 < 0, for x < 0, 0b1110 >> 3 = 0b1111, negate it and becomes 0b0000
         // x & ~(x >> 31) = 0
@@ -47,14 +48,21 @@ void stu_relu(std::span<float> data) {
         /*
         This one also okay with flags on
         */
-        int32_t& bit_val = *(int32_t*)&val; 
-        bit_val &= ~(bit_val >> 31);
+        // int32_t& bit_val = *(int32_t*)&val; 
+        // bit_val &= ~(bit_val >> 31);
+
+        /*
+        No ptr arith?
+        */
+        // int32_t b = std::bit_cast<int32_t>(val);
+        // b &= ~(b >> 31);
+        // val = std::bit_cast<float>(b);
 
         /*
         Fastest for now! (below BASELINE)
         TODO: OPTIMIZE MORE, SIMD maybe?
         */
-        // val = std::max(0.0f, val);
+        data[i] = std::max(0.0f, data[i]);
     }
 }
 

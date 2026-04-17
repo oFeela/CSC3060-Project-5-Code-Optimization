@@ -49,6 +49,18 @@ void stu_matmul(std::vector<float>& C,
                 const std::vector<float>& B,
                 int n) {
     // TODO: Implement your version, and call it in stu_matmul_wrapper
+    // TODO: still same rn, optimize later
+    std::fill(C.begin(), C.end(), 0.0f);
+
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            float sum = 0.0f;
+            for (int k = 0; k < n; ++k) {
+                sum += A[i * n + k] * B[k * n + j];
+            }
+            C[i * n + j] = sum;
+        }
+    }
 }
 
 void naive_matmul_wrapper(void* ctx) {
