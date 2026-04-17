@@ -24,8 +24,15 @@ target_include_directories(kernels PUBLIC include)
 
 # ---- Executables ----
 
+# add_executable(single_bench src/main/single_bench.cpp)
+# target_link_libraries(single_bench PRIVATE kernels)
+
+# add_executable(run_all src/main/run_all.cpp)
+# target_link_libraries(run_all PRIVATE kernels)
+
+# DEEPSEEK Suggestion for Windows
 add_executable(single_bench src/main/single_bench.cpp)
-target_link_libraries(single_bench PRIVATE kernels)
+target_link_libraries(single_bench kernels stdc++exp)
 
 add_executable(run_all src/main/run_all.cpp)
-target_link_libraries(run_all PRIVATE kernels)
+target_link_libraries(run_all kernels stdc++exp)

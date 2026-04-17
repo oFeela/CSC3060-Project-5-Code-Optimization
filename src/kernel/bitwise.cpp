@@ -76,7 +76,7 @@ void stu_bitwise(std::span<std::int8_t> result, std::span<const std::int8_t> a,
         const auto either = static_cast<std::uint8_t>(ua | ub);
         const auto diff = static_cast<std::uint8_t>(ua ^ ub);
         const auto mixed0 =
-            static_cast<std::uint8_t>((diff & kMaskLo) | (~shared & ~kMaskLo));
+        static_cast<std::uint8_t>((diff & kMaskLo) | (~shared & ~kMaskLo));
         const auto mixed1 = static_cast<std::uint8_t>(
             ((either ^ kMaskHi) & (shared | ~kMaskHi)) ^ diff);
 
