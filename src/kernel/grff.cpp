@@ -78,7 +78,99 @@ void naive_grff(grff_args& args) {
 // TODO: Student Implementation
 // -------------------------------------------------------------------------
 void stu_grff(grff_args& args) {
+    // TODO still same but with my comments
+    size_t n = args.a_features.size();
+    
+    // Intermediate buffers
+    std::vector<float> G(n), A_prime(n), Smooth_A(n), B_prime(n), C_prime(n), H(n), E(n);
 
+    #if 0 // naive one, for comparison
+    // Stage 1: Gate
+    for (size_t i = 0; i < n; ++i) 
+        G[i] = 0.5f * ((args.a_features[i] * args.b_features[i]) / (1.0f + std::abs(args.a_features[i] * args.b_features[i])) + 1.0f);
+
+    // Stage 2: Update A (Residual)
+    for (size_t i = 0; i < n; ++i) 
+        A_prime[i] = args.a_features[i] + G[i];
+
+    // Stage 3: Global Feature Scaling
+    float sum_a = 0.0f;
+    for (size_t i = 0; i < n; ++i) {
+        sum_a += A_prime[i];
+    }
+    float avg_a = sum_a / static_cast<float>(n);
+
+    // Stage 4: Update A (Smooth)
+    Smooth_A[0] = A_prime[0];
+    for (size_t i = 1; i < n; ++i) {
+        Smooth_A[i] = (A_prime[i] + A_prime[i-1]) * 0.5f; 
+    }
+
+    // Stage 5: Update B (Suppression)
+    for (size_t i = 0; i < n; ++i) 
+        B_prime[i] = args.b_features[i] * (1.0f - G[i]) * avg_a;
+
+    // Stage 6: Context Integration 
+    for (size_t i = 0; i < n; ++i) 
+        C_prime[i] = args.c_features[i] + (Smooth_A[i] / (1.0f + std::abs(Smooth_A[i])));
+
+    // Stage 7: Hidden Interaction
+    for (size_t i = 0; i < n; ++i) 
+        H[i] = Smooth_A[i] * C_prime[i];
+
+    // Stage 8: Normalization
+    for (size_t i = 0; i < n; ++i) 
+        E[i] = (H[i] + B_prime[i]) / (1.0f + std::abs(Smooth_A[i]));
+
+    // Stage 9: Final Output (ReLU)
+    for (size_t i = 0; i < n; ++i) {
+        float result = C_prime[i] - E[i];
+        args.f_output[i] = std::max(result, 0.0f);
+    }
+    #endif
+
+    #if 1 // better than naive, but 0.827x of the BASELINE
+    float sum_a = 0.0f; // for Stage 3: Global Feature Scaling
+    bool first = true; // my addition, for Stage 4: Update A (Smooth)
+    for (size_t i = 0; i < n; ++i) {
+        // Stage 1: Gate
+        G[i] = 0.5f * ((args.a_features[i] * args.b_features[i]) / (1.0f + std::abs(args.a_features[i] * args.b_features[i])) + 1.0f); // updates G[i]
+        
+        // Stage 2: Update A (Residual)
+        A_prime[i] = args.a_features[i] + G[i]; // needs updated G[i], updates A_prime[i]
+
+        // Stage 3: Global Feature Scaling
+        sum_a += A_prime[i]; // needs updated A_prime[i]
+
+        // Stage 4: Update A (Smooth)
+        if (first) { // TODO hopefully predicts well, only true once
+            Smooth_A[0] = A_prime[0];
+            first = false;
+        }
+        else Smooth_A[i] = (A_prime[i] + A_prime[i-1]) * 0.5f;
+        
+    }
+    float avg_a = sum_a / static_cast<float>(n); // for Stage 3: Global Feature Scaling
+
+    // this goes after avg_a is computed outside above loop
+    for (size_t i = 0; i < n; ++i) {
+        // Stage 5: Update B (Suppression)
+        B_prime[i] = args.b_features[i] * (1.0f - G[i]) * avg_a; // need avg_a
+        
+        // Stage 6: Context Integration 
+        C_prime[i] = args.c_features[i] + (Smooth_A[i] / (1.0f + std::abs(Smooth_A[i])));
+
+        // Stage 7: Hidden Interaction
+        H[i] = Smooth_A[i] * C_prime[i];
+
+        // Stage 8: Normalization
+        E[i] = (H[i] + B_prime[i]) / (1.0f + std::abs(Smooth_A[i]));
+
+        // Stage 9: Final Output (ReLU)
+        float result = C_prime[i] - E[i]; // needs updated C_prime[i], E[i]
+        args.f_output[i] = std::max(result, 0.0f);
+    }
+    #endif
 }
 
 // -------------------------------------------------------------------------
