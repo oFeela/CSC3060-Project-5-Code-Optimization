@@ -8,6 +8,7 @@
 #include "bench.h"
 #include "relu.h"
 #include "bitwise.h"
+#include "matmul.h"
 
 
 int main() {
@@ -23,6 +24,12 @@ int main() {
     initialize_bitwise(&bitwise_args_naive, bitwise_size, seed);
     bitwise_args bitwise_args_student = bitwise_args_naive;
     std::println("\tBitwise: vector length={}", bitwise_size);
+
+    constexpr size_t matmul_size = 512; // TODO change to 512
+    matmul_args matmul_args_naive;
+    initialize_matmul(matmul_args_naive, matmul_size, seed);
+    matmul_args matmul_args_student = matmul_args_naive;
+    std::println("\tMatmul: matrix size={}x{}", matmul_size, matmul_size);
 
     std::vector<bench_t> benchmarks = {
                 // {"ReLU (Naive)",
@@ -53,6 +60,14 @@ int main() {
                 &bitwise_args_student,
                 &bitwise_args_naive,
                 BASELINE_BITWISE},
+
+                {"Matmul (Optimized)",
+                    stu_matmul_wrapper,
+                    naive_matmul_wrapper,
+                    matmul_check,
+                    &matmul_args_student,
+                    &matmul_args_naive,
+                    BASELINE_MATMUL}
     };
     std::cout << "\nRunning Benchmarks...\n";
     std::cout << "--------------------------------------------------------\n";

@@ -1,10 +1,10 @@
 #include "matmul.h"
-
 #include <algorithm>
 #include <cmath>
 #include <random>
 #include <stdexcept>
 #include <vector>
+#include <iostream> // TODO remove
 
 void initialize_matmul(matmul_args& args, int n, uint32_t seed) {
     if (n <= 0) {
@@ -40,6 +40,7 @@ void naive_matmul(std::vector<float>& C,
                 sum += A[i * n + k] * B[k * n + j];
             }
             C[i * n + j] = sum;
+            // std::cout << "naive [" << i << "][" << j << "] = " << sum << std::endl; // TODO remove
         }
     }
 }
@@ -49,18 +50,89 @@ void stu_matmul(std::vector<float>& C,
                 const std::vector<float>& B,
                 int n) {
     // TODO: Implement your version, and call it in stu_matmul_wrapper
-    // TODO: still same rn, optimize later
-    std::fill(C.begin(), C.end(), 0.0f);
+    #if 1 // TODO mine
+    std::vector<double> C_double(C.size(), 0.0); // Use double for accumulation
+    // std::fill(C.begin(), C.end(), 0.0f); // zeros out first, so we can accumulate later
+    constexpr int block_size = 64; // TODO (change later) matrix partition block size
 
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            float sum = 0.0f;
-            for (int k = 0; k < n; ++k) {
-                sum += A[i * n + k] * B[k * n + j];
+    for (int start_i = 0; start_i < n; start_i += block_size) {
+        for (int start_j = 0; start_j < n; start_j += block_size) {
+            // block multiplication
+            for (int start_k = 0; start_k < n; start_k += block_size) {
+                for (int i = start_i; i < std::min(n, start_i + block_size); i++) {
+                    for (int j = start_j; j < std::min(n, start_j + block_size); j++) {
+                        double sum = C_double[i * n + j];
+                        for (int k = start_k; k < std::min(n, start_k + block_size); k++) {
+                            sum += (double) A[i * n + k] * B[k * n + j];
+                        }
+                        C_double[i * n + j] = sum;
+                    }
+                }
             }
-            C[i * n + j] = sum;
+
+            // // output
+            // for (int i = start_i; i < std::min(n, start_i + block_size); i++)
+            //     for (int j = start_j; j < std::min(n, start_j + block_size); j++)
+            //         std::cout << "opti [" << i << "][" << j << "] = " << C[i * n + j] << std::endl; // TODO remove
         }
     }
+
+    // convert back to float from C_double
+    for (size_t i = 0; i < C.size(); i++) {
+        C[i] = static_cast<float>(C_double[i]);
+    }
+    #endif
+
+    #if 0 // TODO partner's
+    std::fill(C.begin(), C.end(), 0.0f);
+
+    constexpr int block_size = 64;
+
+    const float *const a_ptr = A.data();
+    const float *const b_ptr = B.data();
+    float *const c_ptr = C.data();
+
+    for (int start_i = 0; start_i < n; start_i += block_size) {
+        const int end_i = std::min(n, start_i + block_size);
+        for (int start_k = 0; start_k < n; start_k += block_size) {
+            const int end_k = std::min(n, start_k + block_size);
+            for (int start_j = 0; start_j < n; start_j += block_size) {
+                const int end_j = std::min(n, start_j + block_size);
+                const int j_block = end_j - start_j;
+
+                for (int i = start_i; i < end_i; ++i) {
+                    const size_t row_offset =
+                        static_cast<size_t>(i) * static_cast<size_t>(n);
+                    const float *const a_row = a_ptr + row_offset;
+                    float *const c_row = c_ptr + row_offset + start_j;
+
+                    for (int k = start_k; k < end_k; ++k) {
+                        const float a_val = a_row[k];
+                        const float *const b_row =
+                            b_ptr +
+                            static_cast<size_t>(k) * static_cast<size_t>(n) +
+                            start_j;
+
+                        int j = 0;
+                        for (; j + 7 < j_block; j += 8) {
+                            c_row[j + 0] += a_val * b_row[j + 0];
+                            c_row[j + 1] += a_val * b_row[j + 1];
+                            c_row[j + 2] += a_val * b_row[j + 2];
+                            c_row[j + 3] += a_val * b_row[j + 3];
+                            c_row[j + 4] += a_val * b_row[j + 4];
+                            c_row[j + 5] += a_val * b_row[j + 5];
+                            c_row[j + 6] += a_val * b_row[j + 6];
+                            c_row[j + 7] += a_val * b_row[j + 7];
+                        }
+                        for (; j < j_block; ++j) {
+                            c_row[j] += a_val * b_row[j];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    #endif
 }
 
 void naive_matmul_wrapper(void* ctx) {
