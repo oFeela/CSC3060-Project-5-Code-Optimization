@@ -40,16 +40,42 @@ void naive_matmul(std::vector<float>& C,
                 sum += A[i * n + k] * B[k * n + j];
             }
             C[i * n + j] = sum;
-            // std::cout << "naive [" << i << "][" << j << "] = " << sum << std::endl; // TODO remove
         }
     }
 }
 
+// TODO need to fix the accuracy
 void stu_matmul(std::vector<float>& C,
                 const std::vector<float>& A,
                 const std::vector<float>& B,
                 int n) {
     constexpr int block_size = 64; // TODO change later
+
+    #if 0 // FAILED TOO simple just unroll and accumulate
+    constexpr int unroll_factor = 4; // modify code if you modify this
+    std::fill(C.begin(), C.end(), 0.0f);
+
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            
+            // using unrolling factor 4
+            float sum,sum1,sum2,sum3;
+            sum = sum1 = sum2 = sum3 = 0.0f;
+
+            int k = 0;
+            for (; k + unroll_factor-1 < n; k += unroll_factor){
+                sum += A[i * n + k] * B[k * n + j];
+                sum1 += A[i * n + (k+1)] * B[(k+1) * n + j];
+                sum2 += A[i * n + (k+2)] * B[(k+2) * n + j];
+                sum3 += A[i * n + (k+3)] * B[(k+3) * n + j];
+            }
+            for (; k < n; ++k){
+                sum += A[i * n + k] * B[k * n + j];
+            }
+            C[i * n + j] = sum + sum1 + sum2 + sum3;
+        }
+    }
+    #endif
 
     #if 0 // SP float, i-j-k inner loop
     // std::fill(C.begin(), C.end(), 0.0f); // zeros out first
@@ -77,9 +103,9 @@ void stu_matmul(std::vector<float>& C,
     for (size_t i = 0; i < C.size(); i++) {
         C[i] = static_cast<float>(C_double[i]);
     }
-#endif
+    #endif
 
-#if 1 // TODO Double Precision, i-k-j inner loop. MUCH FASTER but why???
+    #if 1 // TODO Double Precision, i-k-j inner loop. MUCH FASTER but why???
     std::vector<double> C_double(C.size(), 0.0);
 
     for (int start_i = 0; start_i < n; start_i += block_size) {
@@ -93,7 +119,7 @@ void stu_matmul(std::vector<float>& C,
                     for (int k = start_k; k < end_k; ++k) {
                         double a_val = A[i * n + k]; // promote to double
                         for (int j = start_j; j < end_j; ++j) {
-                            C[i * n + j] += a_val * B[k * n + j];
+                            C_double[i * n + j] += a_val * B[k * n + j];
                         }
                     }
                 }
@@ -103,7 +129,7 @@ void stu_matmul(std::vector<float>& C,
     for (size_t i = 0; i < C.size(); i++) {
         C[i] = static_cast<float>(C_double[i]);
     }
-#endif
+    #endif
 }
 
 void naive_matmul_wrapper(void* ctx) {
