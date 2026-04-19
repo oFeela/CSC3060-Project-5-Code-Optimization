@@ -36,6 +36,9 @@ set_source_files_properties(src/kernel/grff.cpp
 set_source_files_properties(src/kernel/trace_replay.cpp 
     PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops -fprefetch-loop-arrays"
 )
+set_source_files_properties(src/kernel/graph.cpp 
+    PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops -fprefetch-loop-arrays"
+)
 
 target_include_directories(kernels PUBLIC include)
 
