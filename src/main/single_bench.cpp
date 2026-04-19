@@ -13,17 +13,17 @@
 
 int main() {
     std::uint32_t seed = 12345u;
-    constexpr size_t relu_size = 1024000;
-    relu_args relu_args_naive;
-    initialize_relu(&relu_args_naive, relu_size, seed);
-    relu_args relu_args_student = relu_args_naive;
-    std::println("\tReLU: vector length={}", relu_size);
+    // constexpr size_t relu_size = 1024000;
+    // relu_args relu_args_naive;
+    // initialize_relu(&relu_args_naive, relu_size, seed);
+    // relu_args relu_args_student = relu_args_naive;
+    // std::println("\tReLU: vector length={}", relu_size);
 
-    constexpr size_t bitwise_size = 1024000;
-    bitwise_args bitwise_args_naive;
-    initialize_bitwise(&bitwise_args_naive, bitwise_size, seed);
-    bitwise_args bitwise_args_student = bitwise_args_naive;
-    std::println("\tBitwise: vector length={}", bitwise_size);
+    // constexpr size_t bitwise_size = 1024000;
+    // bitwise_args bitwise_args_naive;
+    // initialize_bitwise(&bitwise_args_naive, bitwise_size, seed);
+    // bitwise_args bitwise_args_student = bitwise_args_naive;
+    // std::println("\tBitwise: vector length={}", bitwise_size);
 
     constexpr size_t matmul_size = 512; // TODO change to 512
     matmul_args matmul_args_naive;
@@ -39,13 +39,13 @@ int main() {
                 //  &relu_args_naive,
                 //  &relu_args_naive,
                 //  BASELINE_RELU},
-                {"ReLU (Optimized)",
-                 stu_relu_wrapper,
-                 naive_relu_wrapper,
-                 relu_check,
-                 &relu_args_student,
-                 &relu_args_naive,
-                 BASELINE_RELU},
+                // {"ReLU (Optimized)",
+                //  stu_relu_wrapper,
+                //  naive_relu_wrapper,
+                //  relu_check,
+                //  &relu_args_student,
+                //  &relu_args_naive,
+                //  BASELINE_RELU},
                 // {"Bitwise (Naive)",
                 // naive_bitwise_wrapper,
                 // naive_bitwise_wrapper,
@@ -53,13 +53,13 @@ int main() {
                 // &bitwise_args_naive,
                 // &bitwise_args_naive,
                 // BASELINE_BITWISE},
-                {"Bitwise (Optimized)",
-                stu_bitwise_wrapper,
-                naive_bitwise_wrapper,
-                bitwise_check,
-                &bitwise_args_student,
-                &bitwise_args_naive,
-                BASELINE_BITWISE},
+                // {"Bitwise (Optimized)",
+                // stu_bitwise_wrapper,
+                // naive_bitwise_wrapper,
+                // bitwise_check,
+                // &bitwise_args_student,
+                // &bitwise_args_naive,
+                // BASELINE_BITWISE},
 
                 {"Matmul (Optimized)",
                     stu_matmul_wrapper,

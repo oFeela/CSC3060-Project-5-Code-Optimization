@@ -18,8 +18,19 @@ target_include_directories(kernels
 
 target_compile_options(kernels
     PRIVATE
-        -ffast-math -Wall -g -fno-omit-frame-pointer -O3 -march=native -fprefetch-loop-arrays
+        -ffast-math -O2 -Wall -g -fno-omit-frame-pointer
 )
+
+set_source_files_properties(src/kernel/relu.cpp 
+    PROPERTIES COMPILE_FLAGS "-ffast-math -Wall -g -fno-omit-frame-pointer -O3 -march=native -fprefetch-loop-arrays"
+)
+set_source_files_properties(src/kernel/bitwise.cpp 
+    PROPERTIES COMPILE_FLAGS "-ffast-math -Wall -g -fno-omit-frame-pointer -O3 -march=native -fprefetch-loop-arrays"
+)
+set_source_files_properties(src/kernel/matmul.cpp 
+    PROPERTIES COMPILE_FLAGS "-ffast-math -Wall -g -fno-omit-frame-pointer -O3"
+)
+
 target_include_directories(kernels PUBLIC include)
 
 # ---- Executables ----

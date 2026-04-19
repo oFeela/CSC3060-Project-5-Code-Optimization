@@ -49,7 +49,7 @@ void stu_matmul(std::vector<float>& C,
                 const std::vector<float>& A,
                 const std::vector<float>& B,
                 int n) {
-    constexpr int block_size = 64; // TODO change later
+    constexpr int block_size = 1; // TODO change later
 
     #if 0 // FAILED TOO simple just unroll and accumulate
     constexpr int unroll_factor = 4; // modify code if you modify this
@@ -105,7 +105,7 @@ void stu_matmul(std::vector<float>& C,
     }
     #endif
 
-    #if 1 // TODO Double Precision, i-k-j inner loop. MUCH FASTER but why???
+    #if 0 // TODO Double Precision, i-k-j inner loop. MUCH FASTER but why???
     std::vector<double> C_double(C.size(), 0.0);
 
     for (int start_i = 0; start_i < n; start_i += block_size) {
@@ -129,6 +129,29 @@ void stu_matmul(std::vector<float>& C,
     for (size_t i = 0; i < C.size(); i++) {
         C[i] = static_cast<float>(C_double[i]);
     }
+    #endif  
+
+    #if 1
+    // std::fill(C.begin(), C.end(), 0.0f);
+
+    std::vector<float> BT(n * n);
+    for (int r = 0; r < n; r++) {
+        for (int c = 0; c < n; c++) {
+            BT[r * n + c] = B[c * n + r];
+        }
+    }
+
+    for (int r = 0; r < n; r++) {
+        for (int c = 0; c < n; c++) {
+            float sum = 0.0f;
+            for (int k = 0; k < n; k++) {
+                sum += A[r * n + k] * BT[c * n + k];
+            }
+            C[r * n + c] = sum;
+        }
+    }
+
+    (void)block_size;
     #endif
 }
 
@@ -182,7 +205,7 @@ bool matmul_check(void* stu_ctx, void* ref_ctx, lab_test_func naive_func) {
                       stu_args.C[i],
                       rel,
                       eps);
-            //return false;
+            return false;
         }
     }
 

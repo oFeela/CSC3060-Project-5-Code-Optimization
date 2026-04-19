@@ -24,18 +24,18 @@ int main() {
 
     std::uint32_t seed = 12345u;
 
-    blackscholes_args black_args;
-    initialize_blackscholes(black_args, 81920, seed);
-    blackscholes_args black_args_stu = black_args;
-    std::cout << "\tBlack-Scholes options: " << black_args.spot_price.size()
-              << '\n';
+    // blackscholes_args black_args;
+    // initialize_blackscholes(black_args, 81920, seed);
+    // blackscholes_args black_args_stu = black_args;
+    // std::cout << "\tBlack-Scholes options: " << black_args.spot_price.size()
+    //           << '\n';
 
-    sparse_spmm_args sparse_args;
-    initialize_spmm(sparse_args, 512, 512, -1, {}, seed);
-    sparse_spmm_args sparse_args_stu = sparse_args;
-    std::cout << "\tSparse A (CSR): " << sparse_args.csr.rows << " x "
-              << sparse_args.csr.cols
-              << ", nnz=" << sparse_args.csr.values.size() << '\n';
+    // sparse_spmm_args sparse_args;
+    // initialize_spmm(sparse_args, 512, 512, -1, {}, seed);
+    // sparse_spmm_args sparse_args_stu = sparse_args;
+    // std::cout << "\tSparse A (CSR): " << sparse_args.csr.rows << " x "
+    //           << sparse_args.csr.cols
+    //           << ", nnz=" << sparse_args.csr.values.size() << '\n';
 
     constexpr size_t relu_size = 1024000;
     relu_args relu_args_naive;
@@ -54,44 +54,44 @@ int main() {
     matmul_args matmul_args_stu = matmul_args_naive;
     std::cout << "\tMatMul: n=" << matmul_args_naive.n << '\n';
 
-    trace_replay_args trace_args_naive;
-    initialize_trace_replay(trace_args_naive, 1 << 16, 1 << 20, seed);
-    trace_replay_args trace_args_stu = trace_args_naive;
-    std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
-              << ", trace_length=" << trace_args_naive.trace.size() << '\n';
+    // trace_replay_args trace_args_naive;
+    // initialize_trace_replay(trace_args_naive, 1 << 16, 1 << 20, seed);
+    // trace_replay_args trace_args_stu = trace_args_naive;
+    // std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
+    //           << ", trace_length=" << trace_args_naive.trace.size() << '\n';
 
-    constexpr std::size_t graph_node_count = 1024000;
-    constexpr int graph_avg_degree = 8;
-    graph_args graph_args_naive;
-    initialize_graph(&graph_args_naive, graph_node_count, graph_avg_degree, seed);
-    graph_args graph_args_stu = graph_args_naive;
-    std::cout << "\tGraph: node_count=" << graph_node_count
-              << ", avg_degree=" << graph_avg_degree << '\n';
+    // constexpr std::size_t graph_node_count = 1024000;
+    // constexpr int graph_avg_degree = 8;
+    // graph_args graph_args_naive;
+    // initialize_graph(&graph_args_naive, graph_node_count, graph_avg_degree, seed);
+    // graph_args graph_args_stu = graph_args_naive;
+    // std::cout << "\tGraph: node_count=" << graph_node_count
+    //           << ", avg_degree=" << graph_avg_degree << '\n';
 
-    constexpr std::size_t grff_size = 1024000;
-    grff_args grff_args_naive;
-    initialize_grff(&grff_args_naive, grff_size, seed);
-    grff_args grff_args_stu = grff_args_naive;
-    std::cout << "\tGRFF: feature size=" << grff_args_naive.a_features.size()
-              << '\n';
+    // constexpr std::size_t grff_size = 1024000;
+    // grff_args grff_args_naive;
+    // initialize_grff(&grff_args_naive, grff_size, seed);
+    // grff_args grff_args_stu = grff_args_naive;
+    // std::cout << "\tGRFF: feature size=" << grff_args_naive.a_features.size()
+    //           << '\n';
 
-    constexpr std::size_t image_width = 1024;
-    constexpr std::size_t image_height = 1000;
-    image_proc_args image_args_naive;
-    initialize_image_proc(&image_args_naive, image_width, image_height, seed);
-    image_proc_args image_args_stu = image_args_naive;
-    std::cout << "\tImage Proc: " << image_args_naive.width << " x "
-              << image_args_naive.height << '\n';
+    // constexpr std::size_t image_width = 1024;
+    // constexpr std::size_t image_height = 1000;
+    // image_proc_args image_args_naive;
+    // initialize_image_proc(&image_args_naive, image_width, image_height, seed);
+    // image_proc_args image_args_stu = image_args_naive;
+    // std::cout << "\tImage Proc: " << image_args_naive.width << " x "
+    //           << image_args_naive.height << '\n';
 
-    const std::size_t WIDTH = 1024;
-    const std::size_t HEIGHT = 1024;
-    filter_gradient_args filter_gradient_args_ref;
-    initialize_filter_gradient(&filter_gradient_args_ref,
-                               WIDTH,
-                               HEIGHT,
-                               seed);
-    filter_gradient_args filter_gradient_args_stu = filter_gradient_args_ref;
-    std::cout << "\tFilter Gradient: " << HEIGHT << " x " << WIDTH << '\n';
+    // const std::size_t WIDTH = 1024;
+    // const std::size_t HEIGHT = 1024;
+    // filter_gradient_args filter_gradient_args_ref;
+    // initialize_filter_gradient(&filter_gradient_args_ref,
+    //                            WIDTH,
+    //                            HEIGHT,
+    //                            seed);
+    // filter_gradient_args filter_gradient_args_stu = filter_gradient_args_ref;
+    // std::cout << "\tFilter Gradient: " << HEIGHT << " x " << WIDTH << '\n';
 
     std::vector<bench_t> benchmarks = {
         // {"Black-Scholes (Optimized)",

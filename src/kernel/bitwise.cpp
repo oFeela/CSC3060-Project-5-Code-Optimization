@@ -4,7 +4,6 @@
 #include <cstring>
 #include <limits>
 #include <random>
-#include <immintrin.h>
 
 void initialize_bitwise(bitwise_args *args, const size_t size,
                                   const std::uint_fast64_t seed) {
@@ -64,31 +63,32 @@ void stu_bitwise(std::span<std::int8_t> result, std::span<const std::int8_t> a,
     const std::size_t n = std::min({result.size(), a.size(), b.size()});
     std::size_t i = 0;
 
-    // naive one, but in fact it is preferred with flags on!
-    constexpr std::uint8_t kMaskLo = 0x5Au;
-    constexpr std::uint8_t kMaskHi = 0xC3u;
-
-    for (; i < n; ++i) {
-        const auto ua = static_cast<std::uint8_t>(a[i]);
-        const auto ub = static_cast<std::uint8_t>(b[i]);
-
-        const auto shared = static_cast<std::uint8_t>(ua & ub);
-        const auto either = static_cast<std::uint8_t>(ua | ub);
-        const auto diff = static_cast<std::uint8_t>(ua ^ ub);
-        const auto mixed0 =
-        static_cast<std::uint8_t>((diff & kMaskLo) | (~shared & ~kMaskLo));
-        const auto mixed1 = static_cast<std::uint8_t>(
-            ((either ^ kMaskHi) & (shared | ~kMaskHi)) ^ diff);
-
-        result[i] = static_cast<std::int8_t>(mixed0 ^ mixed1);
-    }
-
     // explicit call for prefetch: __builtin_prefetch(addr, rw, locality)
     // loops prefetch alr done by the flag in CMakeLists.txt
 
-    // 8 at a time
-    // constexpr std::uint64_t kMaskLoP = 0x5A5A5A5A5A5A5A5Au;
-    // constexpr std::uint64_t kMaskHiP = 0xC3C3C3C3C3C3C3C3u;
+    // 16 at a time
+    // constexpr __uint128_t kMaskLoP128 = (__uint128_t)0x5A5A5A5A5A5A5A5A << 64 | 0x5A5A5A5A5A5A5A5A;
+    // constexpr __uint128_t kMaskHi128 = (__uint128_t)0xC3C3C3C3C3C3C3C3 << 64 | 0xC3C3C3C3C3C3C3C3;
+
+    // for (; i + 15 < n; i += 16) {
+    //     __uint128_t ap, bp;
+    //     memcpy(&ap, &a[i], 16);
+    //     memcpy(&bp, &b[i], 16);
+        
+    //     __uint128_t shared = ap & bp;
+    //     __uint128_t either = ap | bp;
+    //     __uint128_t diff = ap ^ bp;
+    //     __uint128_t mixed0 = (diff & kMaskLoP128) | (~shared & ~kMaskLoP128);
+    //     __uint128_t mixed1 = ((either ^ kMaskHi128) & (shared | ~kMaskHi128)) ^ diff;
+        
+    //     __uint128_t res = mixed0 ^ mixed1;
+        
+    //     memcpy(&result[i], &res, 16);
+    // }
+
+    // // 8 at a time
+    // constexpr std::uint64_t kMaskLo64 = 0x5A5A5A5A5A5A5A5Au;
+    // constexpr std::uint64_t kMaskHi64 = 0xC3C3C3C3C3C3C3C3u;
     // for (; i + 7 < n; i += 8) {
     //     std::uint64_t ap, bp;
     //     // get four elements starting from curr
@@ -98,47 +98,55 @@ void stu_bitwise(std::span<std::int8_t> result, std::span<const std::int8_t> a,
     //     std::uint64_t shared = ap & bp;
     //     std::uint64_t either = ap | bp;
     //     std::uint64_t diff = ap ^ bp;
-    //     std::uint64_t mixed0 = (diff & kMaskLoP) | (~shared & ~kMaskLoP);
-    //     std::uint64_t mixed1 = ((either ^ kMaskHiP) & (shared | ~kMaskHiP)) ^ diff;
+    //     std::uint64_t mixed0 = (diff & kMaskLo64) | (~shared & ~kMaskLo64);
+    //     std::uint64_t mixed1 = ((either ^ kMaskHi64) & (shared | ~kMaskHi64)) ^ diff;
         
     //     std::uint64_t res = mixed0 ^ mixed1;
 
     //     memcpy(&result[i], &res, 8);
     // }
 
-    // 16 at a time
-    // NEVERMIND: SLOWER THAN 8 BITS WITH FLAGS ON
-    // __m128i mask_lo = _mm_set1_epi8(0x5A);
-    // __m128i mask_hi = _mm_set1_epi8(0xC3);
-    // for (size_t i = 0; i + 15 < n; i += 16) {
-    //     __m128i va = _mm_loadu_si128((__m128i*)(&a[i]));
-    //     __m128i vb = _mm_loadu_si128((__m128i*)(&b[i]));
+    // // 4 at a time
+    // constexpr std::uint32_t kMaskLo32 = 0x5A5A5A5Au;
+    // constexpr std::uint32_t kMaskHi32 = 0xC3C3C3C3u;
+    // for (; i + 3 < n; i += 4) {
+    //     std::uint32_t ap, bp;
+    //     // get four elements starting from curr
+    //     memcpy(&ap, &a[i], 4);
+    //     memcpy(&bp, &b[i], 4);
 
-    //     __m128i shared = _mm_and_si128(va, vb);
-    //     __m128i either = _mm_or_si128(va, vb);
-    //     __m128i diff = _mm_xor_si128(va, vb);
+    //     std::uint32_t shared = ap & bp;
+    //     std::uint32_t either = ap | bp;
+    //     std::uint32_t diff = ap ^ bp;
+    //     std::uint32_t mixed0 = (diff & kMaskLo32) | (~shared & ~kMaskLo32);
+    //     std::uint32_t mixed1 = ((either ^ kMaskHi32) & (shared | ~kMaskHi32)) ^ diff;
         
-    //     __m128i mask_lo = _mm_set1_epi8(0x5A);
-    //     __m128i mask_hi = _mm_set1_epi8(0xC3);
-        
-    //     __m128i mixed0 = _mm_or_si128(
-    //         _mm_and_si128(diff, mask_lo),
-    //         _mm_andnot_si128(shared, _mm_andnot_si128(mask_lo, _mm_set1_epi8(-1)))
-    //     );
-        
-    //     __m128i mixed1 = _mm_xor_si128(
-    //         _mm_and_si128(
-    //             _mm_xor_si128(either, mask_hi),
-    //             _mm_or_si128(shared, _mm_andnot_si128(mask_hi, _mm_set1_epi8(-1)))
-    //         ),
-    //         diff
-    //     );
-        
-    //     __m128i result_vec = _mm_xor_si128(mixed0, mixed1);
-    //     _mm_storeu_si128((__m128i*)(&result[i]), result_vec);
+    //     std::uint32_t res = mixed0 ^ mixed1;
+
+    //     memcpy(&result[i], &res, 4);
     // }
 
-    // leftovers
+    // // 2 at a time
+    // constexpr std::uint16_t kMaskLo16 = 0x5A5Au;
+    // constexpr std::uint16_t kMaskHi16 = 0xC3C3u;
+    // for (; i + 1 < n; i += 2) {
+    //     std::uint16_t ap, bp;
+    //     // get four elements starting from curr
+    //     memcpy(&ap, &a[i], 2);
+    //     memcpy(&bp, &b[i], 2);
+
+    //     std::uint16_t shared = ap & bp;
+    //     std::uint16_t either = ap | bp;
+    //     std::uint16_t diff = ap ^ bp;
+    //     std::uint16_t mixed0 = (diff & kMaskLo16) | (~shared & ~kMaskLo16);
+    //     std::uint16_t mixed1 = ((either ^ kMaskHi16) & (shared | ~kMaskHi16)) ^ diff;
+        
+    //     std::uint16_t res = mixed0 ^ mixed1;
+
+    //     memcpy(&result[i], &res, 2);
+    // }
+
+    // leftovers or simply just naive one, preferred with flags on! (-O3)
     constexpr std::uint8_t MaskLo = 0x5Au;
     constexpr std::uint8_t MaskHi = 0xC3u;
     for (; i < n; i++) {
