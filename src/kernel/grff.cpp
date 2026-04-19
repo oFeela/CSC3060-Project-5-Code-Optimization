@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <random>
+#include <thread>
 
 void initialize_grff(grff_args *args, const size_t size, const std::uint_fast64_t seed) {
     if (!args) return;
@@ -78,13 +79,13 @@ void naive_grff(grff_args& args) {
 // TODO: Student Implementation
 // -------------------------------------------------------------------------
 void stu_grff(grff_args& args) {
+    #if 0 // naive one, for comparison, bro there are 7 INTIIALIZATIONS BRO
     // TODO still same but with my comments
     size_t n = args.a_features.size();
     
     // Intermediate buffers
     std::vector<float> G(n), A_prime(n), Smooth_A(n), B_prime(n), C_prime(n), H(n), E(n);
 
-    #if 0 // naive one, for comparison
     // Stage 1: Gate
     for (size_t i = 0; i < n; ++i) 
         G[i] = 0.5f * ((args.a_features[i] * args.b_features[i]) / (1.0f + std::abs(args.a_features[i] * args.b_features[i])) + 1.0f);
@@ -129,7 +130,7 @@ void stu_grff(grff_args& args) {
     }
     #endif
 
-    #if 1 // better than naive, but 0.827x of the BASELINE
+    #if 0 // better than naive, but 0.827x of the BASELINE
     float sum_a = 0.0f; // for Stage 3: Global Feature Scaling
     bool first = true; // my addition, for Stage 4: Update A (Smooth)
     for (size_t i = 0; i < n; ++i) {
@@ -171,6 +172,121 @@ void stu_grff(grff_args& args) {
         args.f_output[i] = std::max(result, 0.0f);
     }
     #endif
+
+    #if 1
+    size_t n = args.a_features.size();
+    std::vector<float> G(n), A(n);
+    float sum_a = 0.0f;
+    float prev_A_prime = 0.0f; // for smooth_A purpose
+
+    // only for the first element
+    float p = args.a_features[0] * args.b_features[0];
+
+    G[0] = 0.5f * (p / (1.0f + std::abs(p)) + 1.0f);
+    A[0] = args.a_features[0] + G[0]; // A_prime
+
+    sum_a += A[0];
+
+    prev_A_prime = A[0];
+
+    // the rest
+    for (size_t i = 1; i < n; i++) {
+        p = args.a_features[i] * args.b_features[i];
+
+        G[i] = 0.5f * (p / (1.0f + std::abs(p)) + 1.0f);
+        A[i] = args.a_features[i] + G[i]; // A_prime
+
+        sum_a += A[i];
+
+        float temp = A[i];
+        // smooth_A
+        A[i] = (A[i] + prev_A_prime) * 0.5f;
+        prev_A_prime = temp;
+    }
+    float avg_a = sum_a / static_cast<float>(n);
+    // above should be ok now! (i think, only 2 vector yayy)
+
+    #if 0
+    for (size_t i = 0; i < n; i++) {
+        float B = args.b_features[i] * (1.0f - G[i]) * avg_a;
+        float C = args.c_features[i] + (A[i] / (1.0f + std::abs(A[i])));
+        float H = A[i] * C;
+        float E = (H + B) / (1.0f + std::abs(A[i]));
+        float res = C - E;
+        args.f_output[i] = std::max(res, 0.0f);
+    }
+    #endif
+
+    // mutlithread GOOD also wow
+    // key takeaway: use multithreading when one iteration of a loop DOES LOTS OF computation
+    // obviously u neeed to ensure independence
+    #if 1
+    unsigned int num_threads = std::thread::hardware_concurrency();
+    std::vector<std::thread> threads;
+    size_t chunk_size = n / num_threads;
+
+    for (unsigned int t = 0; t < num_threads; t++) {
+        size_t start = t * chunk_size;
+        size_t end = (t == num_threads - 1) ? n : start + chunk_size;
+        
+        threads.emplace_back([&, start, end]() {
+            for (size_t i = start; i < end; i++) {
+                float B = args.b_features[i] * (1.0f - G[i]) * avg_a;
+                float C = args.c_features[i] + (A[i] / (1.0f + std::abs(A[i])));
+                float H = A[i] * C;
+                float E = (H + B) / (1.0f + std::abs(A[i]));
+                float res = C - E;
+                args.f_output[i] = std::max(res, 0.0f);
+            }
+        });
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+    #endif
+    #endif
+
+    // 3 vectors ionstead of 2
+    // theres preicsion loss here :(
+    #if 0
+    size_t n = args.a_features.size();
+    std::vector<float> G(n), A(n), SA(n);
+    float sum_a = 0.0f;
+
+    // only for the first element
+    float p = args.a_features[0] * args.b_features[0];
+
+    G[0] = 0.5f * (p / (1.0f + std::abs(p)) + 1.0f);
+    A[0] = args.a_features[0] + G[0]; // A_prime
+
+    sum_a += A[0];
+    SA[0] = A[0];
+
+    // the rest
+    for (size_t i = 1; i < n; i++) {
+        p = args.a_features[i] * args.b_features[i];
+
+        G[i] = 0.5f * (p / (1.0f + std::abs(p)) + 1.0f);
+        A[i] = args.a_features[i] + G[i]; // A_prime
+
+        sum_a += A[i];
+
+        // smooth_A
+        SA[i] = (A[i] + A[i - 1]) * 0.5f;
+    }
+    float avg_a = sum_a / static_cast<float>(n);
+    // above should be ok now! (i think, only 2 vector yayy)
+
+    for (size_t i = 0; i < n; i++) {
+        float B = args.b_features[i] * (1.0f - G[i]) * avg_a;
+        float C = args.c_features[i] + (SA[i] / (1.0f + std::abs(SA[i])));
+        float H = SA[i] * C;
+        float E = (H + B) / (1.0f + std::abs(SA[i]));
+        float res = C - E;
+        args.f_output[i] = std::max(res, 0.0f);
+    }
+    #endif
 }
 
 // -------------------------------------------------------------------------
@@ -202,7 +318,8 @@ bool grff_check(void *stu_ctx, void *ref_ctx, lab_test_func naive_func) {
         double err = std::abs(s - r);
 
         if (err > (atol + eps * std::abs(r))) {
-            debug_log("DEBUG: GRFF fail at %zu: ref=%f stu=%f\n", i, r, s);
+            // debug_log("DEBUG: GRFF fail at %zu: ref=%f stu=%f\n", i, r, s);
+            debug_log("DEBUG: GRFF fail at {}: ref={} stu={}\n", i, r, s);
             return false;
         }
     }

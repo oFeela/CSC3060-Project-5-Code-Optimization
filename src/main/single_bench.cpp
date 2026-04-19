@@ -9,6 +9,7 @@
 #include "relu.h"
 #include "bitwise.h"
 #include "matmul.h"
+#include "grff.h"
 
 
 int main() {
@@ -25,20 +26,20 @@ int main() {
     // bitwise_args bitwise_args_student = bitwise_args_naive;
     // std::println("\tBitwise: vector length={}", bitwise_size);
 
-    constexpr size_t matmul_size = 512; // TODO change to 512
-    matmul_args matmul_args_naive;
-    initialize_matmul(matmul_args_naive, matmul_size, seed);
-    matmul_args matmul_args_student = matmul_args_naive;
-    std::println("\tMatmul: matrix size={}x{}", matmul_size, matmul_size);
+    // constexpr size_t matmul_size = 512; // TODO change to 512
+    // matmul_args matmul_args_naive;
+    // initialize_matmul(matmul_args_naive, matmul_size, seed);
+    // matmul_args matmul_args_student = matmul_args_naive;
+    // std::println("\tMatmul: matrix size={}x{}", matmul_size, matmul_size);
+
+    constexpr std::size_t grff_size = 1024000;
+    grff_args grff_args_naive;
+    initialize_grff(&grff_args_naive, grff_size, seed);
+    grff_args grff_args_stu = grff_args_naive;
+    std::cout << "\tGRFF: feature size=" << grff_args_naive.a_features.size()
+              << '\n';
 
     std::vector<bench_t> benchmarks = {
-                // {"ReLU (Naive)",
-                //  naive_relu_wrapper,
-                //  naive_relu_wrapper,
-                //  relu_check,
-                //  &relu_args_naive,
-                //  &relu_args_naive,
-                //  BASELINE_RELU},
                 // {"ReLU (Optimized)",
                 //  stu_relu_wrapper,
                 //  naive_relu_wrapper,
@@ -46,13 +47,6 @@ int main() {
                 //  &relu_args_student,
                 //  &relu_args_naive,
                 //  BASELINE_RELU},
-                // {"Bitwise (Naive)",
-                // naive_bitwise_wrapper,
-                // naive_bitwise_wrapper,
-                // bitwise_check,
-                // &bitwise_args_naive,
-                // &bitwise_args_naive,
-                // BASELINE_BITWISE},
                 // {"Bitwise (Optimized)",
                 // stu_bitwise_wrapper,
                 // naive_bitwise_wrapper,
@@ -60,14 +54,20 @@ int main() {
                 // &bitwise_args_student,
                 // &bitwise_args_naive,
                 // BASELINE_BITWISE},
-
-                {"Matmul (Optimized)",
-                    stu_matmul_wrapper,
-                    naive_matmul_wrapper,
-                    matmul_check,
-                    &matmul_args_student,
-                    &matmul_args_naive,
-                    BASELINE_MATMUL}
+                // {"Matmul (Optimized)",
+                //     stu_matmul_wrapper,
+                //     naive_matmul_wrapper,
+                //     matmul_check,
+                //     &matmul_args_student,
+                //     &matmul_args_naive,
+                //     BASELINE_MATMUL}
+                {"GRFF (Optimized)",
+                stu_grff_wrapper,
+                naive_grff_wrapper,
+                grff_check,
+                &grff_args_stu,
+                &grff_args_naive,
+                BASELINE_GRFF},
     };
     std::cout << "\nRunning Benchmarks...\n";
     std::cout << "--------------------------------------------------------\n";

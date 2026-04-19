@@ -4,6 +4,7 @@
 #include <cstring>
 #include <limits>
 #include <random>
+#include <thread>
 
 void initialize_bitwise(bitwise_args *args, const size_t size,
                                   const std::uint_fast64_t seed) {
@@ -147,6 +148,7 @@ void stu_bitwise(std::span<std::int8_t> result, std::span<const std::int8_t> a,
     // }
 
     // leftovers or simply just naive one, preferred with flags on! (-O3)
+    #if 0
     constexpr std::uint8_t MaskLo = 0x5Au;
     constexpr std::uint8_t MaskHi = 0xC3u;
     for (; i < n; i++) {
@@ -163,6 +165,63 @@ void stu_bitwise(std::span<std::int8_t> result, std::span<const std::int8_t> a,
 
         result[i] = static_cast<std::int8_t>(mixed0 ^ mixed1);
     }
+    #endif
+
+    #if 1
+    // 16 at a time
+    // constexpr __uint128_t mask1 = (__uint128_t)0x8181818181818181 << 64 | 0x8181818181818181;
+    // constexpr __uint128_t mask2 = (__uint128_t)0x1818181818181818 << 64 | 0x1818181818181818;
+    // constexpr __uint128_t mask3 = (__uint128_t)0x2424242424242424 << 64 | 0x2424242424242424;
+
+    // for (; i + 15 < n; i += 16) {
+    //     __uint128_t ap, bp;
+    //     memcpy(&ap, &a[i], 16);
+    //     memcpy(&bp, &b[i], 16);
+
+    //     __uint128_t either = ap | bp;
+    //     __uint128_t res = ((~either) & mask1) | (either & mask2) | (mask3);
+        
+    //     memcpy(&result[i], &res, 16);
+    // }
+
+    // from a friend, he really found an equivalent expression wow
+    for (; i < n; i++) {
+        const auto ua = static_cast<std::uint8_t>(a[i]);
+        const auto ub = static_cast<std::uint8_t>(b[i]);
+
+        const auto either = ua | ub;
+        const auto bitresult = (((~either) & 0x81u) | (either & 0x18u) | (0x24u));
+        result[i] = static_cast<std::uint8_t>(bitresult);
+    }
+    #endif
+
+
+    #if 0
+    unsigned int num_threads = std::thread::hardware_concurrency();
+    std::vector<std::thread> threads;
+    
+    size_t chunk_size = n / num_threads;
+    
+    for (unsigned int t = 0; t < num_threads; t++) {
+        size_t start = t * chunk_size;
+        size_t end = (t == num_threads - 1) ? n : start + chunk_size;
+        
+        threads.emplace_back([&, start, end]() {
+            for (size_t i = start; i < end; i++) {
+                const auto ua = static_cast<uint8_t>(a[i]);
+                const auto ub = static_cast<uint8_t>(b[i]);
+                
+                const auto either = ua | ub;
+                const auto bitresult = (((~either) & 0x81u) | (either & 0x18u) | (0x24u));
+                result[i] = static_cast<uint8_t>(bitresult);
+            }
+        });
+    }
+    
+    for (auto& t : threads) {
+        t.join();
+    }
+    #endif
 }
 
 void naive_bitwise_wrapper(void *ctx) {

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <random>
 #include <bit>
+#include <thread>
 
 void initialize_relu(relu_args *args, const size_t size,
                      const std::uint_fast64_t seed) {
@@ -33,7 +34,32 @@ void naive_relu(std::span<float> data) {
 
 void stu_relu(std::span<float> data) {
     // TODO: Implement your version, and call it in stu_relu_wrapper
-    // TODO: try MULTITHREADING ALSO
+    // TODO: try MULTITHREADING ALSO, slower :( --> probably due to the intialization overhead
+    #if 0
+    size_t n = data.size();
+    unsigned int num_threads = std::thread::hardware_concurrency();
+    std::vector<std::thread> threads;
+
+    size_t chunk_size = n / num_threads;
+
+    for (unsigned int t = 0; t < num_threads; t++) {
+        size_t start = t * chunk_size;
+        size_t end = (t == num_threads - 1) ? n : start + chunk_size;
+        
+        threads.emplace_back([&data, start, end]() {
+            for (size_t i = start; i < end; i++) {
+                // data[i] = std::max(0.0f, data[i]);
+                int32_t b = std::bit_cast<int32_t>(data[i]);
+                b &= ~(b >> 31);
+                data[i] = std::bit_cast<float>(b);
+            }
+        });
+    }
+
+    for (auto& t : threads) t.join();
+    #endif
+
+    #if 1
     size_t n = data.size();
     for (size_t i = 0; i < n; i++) {
         // x & ~(x >> 31) = x
@@ -64,6 +90,7 @@ void stu_relu(std::span<float> data) {
         */
         data[i] = std::max(0.0f, data[i]);
     }
+    #endif
 }
 
 void naive_relu_wrapper(void *ctx) {
