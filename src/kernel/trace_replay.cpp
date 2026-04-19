@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <thread>
 
 namespace {
 
@@ -93,6 +94,71 @@ void stu_trace_replay(uint64_t& out,
                       const std::vector<RequestRecord>& records,
                       const std::vector<uint32_t>& trace) {
     // TODO: Implement your version, and call it in stu_trace_replay_wrapper
+    # if 1
+    // precompute costs for all records
+    // 65,536 in size according to the github page
+    std::vector<uint64_t> cost(records.size());
+    for (size_t i = 0; i < records.size(); i++) {
+        cost[i] = trace_replay_cost(records[i]);
+    }
+
+    // old logic
+    uint64_t total = 0;
+    const uint64_t order_mix = 1315423911ull;
+
+    for (size_t i = 0; i < trace.size(); ++i) {
+        // this is better because:
+        // trace[i] --> get index
+        // cost[idx] is instant
+        // compared to:
+        // trace_replay_cost(records[trace[i]]) --> have to access records[trace[i]] for 1 million times
+        // so precomputation (only need to do ~65k iterations for all records) vs. 1 million
+        total = total * order_mix + cost[trace[i]];
+    }
+
+    out = total;
+    #endif
+
+    // multithreading
+    // not worth
+    #if 0
+    unsigned int num_threads = 2;
+    std::vector<std::thread> threads;
+    size_t n = records.size();
+    size_t chunk_size = n / num_threads;
+    std::vector<uint64_t> cost(records.size());
+
+    // precompute costs for all records
+    // 65,536 in size according to the github page
+    for (unsigned int t = 0; t < num_threads; t++) {
+        size_t start = t * chunk_size;
+        size_t end = (t == num_threads - 1) ? n : start + chunk_size; // if last then n, if not then st + chunk_sz
+
+        threads.emplace_back([&, start, end]() {
+            for (size_t i = start; i < end; i++) {
+                cost[i] = trace_replay_cost(records[i]);
+            }
+        });
+    }
+
+    for (auto& t : threads) t.join();
+
+    // old logic
+    uint64_t total = 0;
+    const uint64_t order_mix = 1315423911ull;
+
+    for (size_t i = 0; i < trace.size(); ++i) {
+        // this is better because:
+        // trace[i] --> get index
+        // cost[idx] is instant
+        // compared to:
+        // trace_replay_cost(records[trace[i]]) --> have to access records[trace[i]] for 1 million times
+        // so precomputation (only need to do ~65k iterations for all records) vs. 1 million
+        total = total * order_mix + cost[trace[i]];
+    }
+
+    out = total;
+    #endif
 }
 
 void naive_trace_replay_wrapper(void* ctx) {

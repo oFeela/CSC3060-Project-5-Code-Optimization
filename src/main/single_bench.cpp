@@ -10,6 +10,7 @@
 #include "bitwise.h"
 #include "matmul.h"
 #include "grff.h"
+#include "trace_replay.h"
 
 
 int main() {
@@ -32,12 +33,18 @@ int main() {
     // matmul_args matmul_args_student = matmul_args_naive;
     // std::println("\tMatmul: matrix size={}x{}", matmul_size, matmul_size);
 
-    constexpr std::size_t grff_size = 1024000;
-    grff_args grff_args_naive;
-    initialize_grff(&grff_args_naive, grff_size, seed);
-    grff_args grff_args_stu = grff_args_naive;
-    std::cout << "\tGRFF: feature size=" << grff_args_naive.a_features.size()
-              << '\n';
+    // constexpr std::size_t grff_size = 1024000;
+    // grff_args grff_args_naive;
+    // initialize_grff(&grff_args_naive, grff_size, seed);
+    // grff_args grff_args_stu = grff_args_naive;
+    // std::cout << "\tGRFF: feature size=" << grff_args_naive.a_features.size()
+    //           << '\n';
+
+    trace_replay_args trace_args_naive;
+    initialize_trace_replay(trace_args_naive, 1 << 16, 1 << 20, seed);
+    trace_replay_args trace_args_stu = trace_args_naive;
+    std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
+              << ", trace_length=" << trace_args_naive.trace.size() << '\n';
 
     std::vector<bench_t> benchmarks = {
                 // {"ReLU (Optimized)",
@@ -61,13 +68,20 @@ int main() {
                 //     &matmul_args_student,
                 //     &matmul_args_naive,
                 //     BASELINE_MATMUL}
-                {"GRFF (Optimized)",
-                stu_grff_wrapper,
-                naive_grff_wrapper,
-                grff_check,
-                &grff_args_stu,
-                &grff_args_naive,
-                BASELINE_GRFF},
+                // {"GRFF (Optimized)",
+                // stu_grff_wrapper,
+                // naive_grff_wrapper,
+                // grff_check,
+                // &grff_args_stu,
+                // &grff_args_naive,
+                // BASELINE_GRFF},
+                {"Trace Replay (Optimized)",
+                stu_trace_replay_wrapper,
+                naive_trace_replay_wrapper,
+                trace_replay_check,
+                &trace_args_stu,
+                &trace_args_naive,
+                BASELINE_TRACE_REPLAY},
     };
     std::cout << "\nRunning Benchmarks...\n";
     std::cout << "--------------------------------------------------------\n";
