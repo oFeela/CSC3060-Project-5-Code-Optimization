@@ -54,11 +54,11 @@ int main() {
     matmul_args matmul_args_stu = matmul_args_naive;
     std::cout << "\tMatMul: n=" << matmul_args_naive.n << '\n';
 
-    // trace_replay_args trace_args_naive;
-    // initialize_trace_replay(trace_args_naive, 1 << 16, 1 << 20, seed);
-    // trace_replay_args trace_args_stu = trace_args_naive;
-    // std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
-    //           << ", trace_length=" << trace_args_naive.trace.size() << '\n';
+    trace_replay_args trace_args_naive;
+    initialize_trace_replay(trace_args_naive, 1 << 16, 1 << 20, seed);
+    trace_replay_args trace_args_stu = trace_args_naive;
+    std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
+              << ", trace_length=" << trace_args_naive.trace.size() << '\n';
 
     // constexpr std::size_t graph_node_count = 1024000;
     // constexpr int graph_avg_degree = 8;
@@ -129,13 +129,13 @@ int main() {
          &matmul_args_stu,
          &matmul_args_naive,
          BASELINE_MATMUL},
-        // {"Trace Replay (Optimized)",
-        //  stu_trace_replay_wrapper,
-        //  naive_trace_replay_wrapper,
-        //  trace_replay_check,
-        //  &trace_args_stu,
-        //  &trace_args_naive,
-        //  BASELINE_TRACE_REPLAY},
+        {"Trace Replay (Optimized)",
+         stu_trace_replay_wrapper,
+         naive_trace_replay_wrapper,
+         trace_replay_check,
+         &trace_args_stu,
+         &trace_args_naive,
+         BASELINE_TRACE_REPLAY},
         // {"Graph (Optimized)",
         //  stu_graph_wrapper,
         //  naive_graph_wrapper,
