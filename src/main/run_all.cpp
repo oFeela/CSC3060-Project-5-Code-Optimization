@@ -68,12 +68,12 @@ int main() {
     // std::cout << "\tGraph: node_count=" << graph_node_count
     //           << ", avg_degree=" << graph_avg_degree << '\n';
 
-    // constexpr std::size_t grff_size = 1024000;
-    // grff_args grff_args_naive;
-    // initialize_grff(&grff_args_naive, grff_size, seed);
-    // grff_args grff_args_stu = grff_args_naive;
-    // std::cout << "\tGRFF: feature size=" << grff_args_naive.a_features.size()
-    //           << '\n';
+    constexpr std::size_t grff_size = 1024000;
+    grff_args grff_args_naive;
+    initialize_grff(&grff_args_naive, grff_size, seed);
+    grff_args grff_args_stu = grff_args_naive;
+    std::cout << "\tGRFF: feature size=" << grff_args_naive.a_features.size()
+              << '\n';
 
     // constexpr std::size_t image_width = 1024;
     // constexpr std::size_t image_height = 1000;
@@ -143,13 +143,13 @@ int main() {
         //  &graph_args_stu,
         //  &graph_args_naive,
         //  BASELINE_GRAPH},
-        // {"GRFF (Optimized)",
-        //  stu_grff_wrapper,
-        //  naive_grff_wrapper,
-        //  grff_check,
-        //  &grff_args_stu,
-        //  &grff_args_naive,
-        //  BASELINE_GRFF},
+        {"GRFF (Optimized)",
+         stu_grff_wrapper,
+         naive_grff_wrapper,
+         grff_check,
+         &grff_args_stu,
+         &grff_args_naive,
+         BASELINE_GRFF},
         // {"Image Proc (Optimized)",
         //  stu_image_proc_wrapper,
         //  naive_image_proc_wrapper,

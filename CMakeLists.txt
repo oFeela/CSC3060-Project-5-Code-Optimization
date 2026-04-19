@@ -22,13 +22,16 @@ target_compile_options(kernels
 )
 
 set_source_files_properties(src/kernel/relu.cpp 
-    PROPERTIES COMPILE_FLAGS "-ffast-math -Wall -g -fno-omit-frame-pointer -O3 -march=native -fprefetch-loop-arrays"
+    PROPERTIES COMPILE_FLAGS "-O3 -march=native -fprefetch-loop-arrays"
 )
 set_source_files_properties(src/kernel/bitwise.cpp 
-    PROPERTIES COMPILE_FLAGS "-ffast-math -Wall -g -fno-omit-frame-pointer -O3 -march=native -fprefetch-loop-arrays"
+    PROPERTIES COMPILE_FLAGS "-O3 -march=native -fprefetch-loop-arrays"
 )
 set_source_files_properties(src/kernel/matmul.cpp 
-    PROPERTIES COMPILE_FLAGS "-ffast-math -Wall -g -fno-omit-frame-pointer -O3"
+    PROPERTIES COMPILE_FLAGS "-O3"
+)
+set_source_files_properties(src/kernel/grff.cpp 
+    PROPERTIES COMPILE_FLAGS "-O3 -march=native -fprefetch-loop-arrays"
 )
 
 target_include_directories(kernels PUBLIC include)

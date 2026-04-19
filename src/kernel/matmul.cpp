@@ -4,7 +4,7 @@
 #include <random>
 #include <stdexcept>
 #include <vector>
-#include <iostream> // TODO remove
+#include <thread>
 
 void initialize_matmul(matmul_args& args, int n, uint32_t seed) {
     if (n <= 0) {
@@ -131,7 +131,7 @@ void stu_matmul(std::vector<float>& C,
     }
     #endif  
 
-    #if 1
+    #if 0
     // std::fill(C.begin(), C.end(), 0.0f);
 
     std::vector<float> BT(n * n);
@@ -151,6 +151,43 @@ void stu_matmul(std::vector<float>& C,
         }
     }
 
+    (void)block_size;
+    #endif
+
+    // multithreading insane
+    #if 1
+    unsigned int num_threads = std::thread::hardware_concurrency();
+
+    std::vector<float> BT(n * n);
+    for (int r = 0; r < n; r++) {
+        for (int c = 0; c < n; c++) {
+            BT[r * n + c] = B[c * n + r];
+        }
+    }
+
+    std::vector<std::thread> threads;
+    size_t rows_per_thread = n / num_threads;
+
+    for (unsigned int t = 0; t < num_threads; t++) {
+        int start_row = t * rows_per_thread;
+        int end_row = (t == num_threads - 1) ? n : start_row + rows_per_thread;
+        
+        threads.emplace_back([&, start_row, end_row]() {
+            for (int r = start_row; r < end_row; r++) {
+                for (int c = 0; c < n; c++) {
+                    float sum = 0.0f;
+                    for (int k = 0; k < n; k++) {
+                        sum += A[r * n + k] * BT[c * n + k];
+                    }
+                    C[r * n + c] = sum;
+                }
+            }
+        });
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
     (void)block_size;
     #endif
 }
