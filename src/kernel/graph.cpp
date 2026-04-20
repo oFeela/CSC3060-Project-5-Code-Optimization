@@ -52,11 +52,11 @@ void initialize_graph(graph_args* args,
 
     args->out = 0;
 
-    // construc tthe optimized graph
-    initialize_optimized_graph(args, avg_degree);
+    // construc tthe optimized graph, assuming we HAVE no info about the avg_degree --> so it can generalize to ANY directed graph
+    initialize_optimized_graph(args);
 }
 
-void initialize_optimized_graph(graph_args* args, int avg_degree) {
+void initialize_optimized_graph(graph_args* args) {
     args->opt_graph.n = args->graph.n;
     args->opt_graph.m = args->edge_storage.size();
     args->opt_graph.offsets.resize(args->opt_graph.n + 1); // one extra as a dummy
@@ -66,19 +66,21 @@ void initialize_optimized_graph(graph_args* args, int avg_degree) {
     args->opt_graph.sum.resize(args->opt_graph.n);
     args->opt_graph.tot_sum = 0;
 
+    int edge_idx = 0;
     for (int i = 0; i < args->opt_graph.n; i++) {
-        args->opt_graph.offsets[i] = i * avg_degree;
+        args->opt_graph.offsets[i] = edge_idx;
         Edge* e = args->nodes[i].edges;
         int sum = 0;
-        for (int j = 0; j < avg_degree; j++) {
-            args->opt_graph.edge_dests[i * avg_degree + j] = e->to;
+        while (e != nullptr) {
+            args->opt_graph.edge_dests[edge_idx] = e->to;
             sum += e->to;
             e = e->next;
+            edge_idx++;
         }
         args->opt_graph.sum[i] = sum;
         args->opt_graph.tot_sum += static_cast<uint64_t>(sum);
     }
-    args->opt_graph.offsets[args->opt_graph.n] = args->opt_graph.n * avg_degree;
+    args->opt_graph.offsets[args->opt_graph.n] = edge_idx;
 }
 
 void naive_graph(std::uint64_t& out, const Graph& graph) {

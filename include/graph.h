@@ -76,7 +76,7 @@ void initialize_graph(graph_args* args,
                        int avg_degree,
                        std::uint_fast64_t seed);
 
-void initialize_optimized_graph(graph_args* args, int avg_degree);
+void initialize_optimized_graph(graph_args* args);
 
 bool graph_check(void* stu_ctx, void* ref_ctx, lab_test_func naive_func);
 
