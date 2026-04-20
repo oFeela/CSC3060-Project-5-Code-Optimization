@@ -36,9 +36,10 @@ struct OptimizedGraph {
     int m;
     // which edge index the i-th node starts at, and the end is before the edge index which the (i+1)-th node starts at
     std::vector<int> offsets; 
-    std::vector<int> edge_dists; // size: m, which node the edge points to
+    std::vector<int> edge_dests; // size: m, which node the edge points to
 
     // what if i just store the sum of edge_dists for each node immediately?
+    // NOT USED!!! it was just for experiment
     std::vector<int> sum;
     uint64_t tot_sum;
 
