@@ -162,7 +162,49 @@ void naive_image_proc(image_proc_args& args) {
 // TODO: Student Implementation
 // -------------------------------------------------------------------------
 void stu_image_proc(image_proc_args& args) {
+    const size_t w = args.width;
+    const size_t h = args.height;
+    float* __restrict__ out = args.output.data();
+    const float* __restrict__ r = args.r_channel.data();
+    const float* __restrict__ g = args.g_channel.data();
+    const float* __restrict__ b = args.b_channel.data();
+    const float threshold = args.threshold;
 
+    for (size_t y = 0; y < h; ++y)  {
+        for (size_t x = 0; x < w; ++x){
+            size_t i = y * w + x;
+
+            // Stage 1: Update RGB Value
+            float r_val = (((r[i]* 1.05f) + 0.02f) > 1.0f) ? 1.0f : ((r[i]* 1.05f) + 0.02f);
+            float b_val = (((b[i]* 1.05f) + 0.02f) > 1.0f) ? 1.0f : ((b[i]* 1.05f) + 0.02f);
+            float g_val = (((g[i]* 1.05f) + 0.02f) > 1.0f) ? 1.0f : ((g[i]* 1.05f) + 0.02f);
+
+            // Stage 2: Luminance Extraction
+            float gray = (r_val * 0.299f) + (g_val * 0.587f) + (b_val * 0.114f);
+
+            // Stage 3: Contrast Enhancement
+            float adjusted = std::clamp((gray - 0.05f) / 0.90f, 0.0f, 1.0f);
+            float grayEnhance = adjusted * adjusted * (3.0f - 2.0f * adjusted);
+
+            // Stage 4: HDR Compression
+            float g1 = (grayEnhance * 1.2f) * 0.5f;
+            float g2 = g1 * g1 + 0.1f;
+            float g3 = std::sqrt(g2);
+            float gain = (g3 > 1.0f) ? (1.0f / g3) : (g3 * 0.95f);
+            float result = grayEnhance * gain;
+            float compress_val = result / (1.0f + result);
+
+            // Stage 5: Masking
+            float mask = complex_mask_logic(compress_val, r_val, g_val, b_val, threshold);
+
+            // Stage 6: Importance Weighting
+            float weight = importance_weight(mask);
+
+            // Output
+            out[i] = std::clamp(compress_val * weight, 0.0f, 1.0f);
+
+        }
+    }
 }
 
 
