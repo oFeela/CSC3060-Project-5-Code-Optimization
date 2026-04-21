@@ -54,11 +54,11 @@ int main() {
     matmul_args matmul_args_stu = matmul_args_naive;
     std::cout << "\tMatMul: n=" << matmul_args_naive.n << '\n';
 
-    trace_replay_args trace_args_naive;
-    initialize_trace_replay(trace_args_naive, 1 << 16, 1 << 20, seed);
-    trace_replay_args trace_args_stu = trace_args_naive;
-    std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
-              << ", trace_length=" << trace_args_naive.trace.size() << '\n';
+    // trace_replay_args trace_args_naive;
+    // initialize_trace_replay(trace_args_naive, 1 << 16, 1 << 20, seed);
+    // trace_replay_args trace_args_stu = trace_args_naive;
+    // std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
+    //           << ", trace_length=" << trace_args_naive.trace.size() << '\n';
 
     constexpr std::size_t graph_node_count = 1024000;
     constexpr int graph_avg_degree = 8;
@@ -83,15 +83,16 @@ int main() {
     // std::cout << "\tImage Proc: " << image_args_naive.width << " x "
     //           << image_args_naive.height << '\n';
 
-    // const std::size_t WIDTH = 1024;
-    // const std::size_t HEIGHT = 1024;
-    // filter_gradient_args filter_gradient_args_ref;
-    // initialize_filter_gradient(&filter_gradient_args_ref,
-    //                            WIDTH,
-    //                            HEIGHT,
-    //                            seed);
-    // filter_gradient_args filter_gradient_args_stu = filter_gradient_args_ref;
-    // std::cout << "\tFilter Gradient: " << HEIGHT << " x " << WIDTH << '\n';
+    const std::size_t WIDTH = 1024;
+    const std::size_t HEIGHT = 1024;
+    filter_gradient_args filter_gradient_args_ref;
+    initialize_filter_gradient(&filter_gradient_args_ref, WIDTH, HEIGHT, seed);
+    // conversion of data structure for stu only
+    std::vector<pixel> target{}; // resized inside convert function
+    convert_data_struct(WIDTH, HEIGHT, filter_gradient_args_ref.data, target);
+    filter_gradient_args filter_gradient_args_stu = filter_gradient_args_ref;
+    filter_gradient_args_stu.converted_data = target;
+    std::cout << "\tFilter Gradient: " << HEIGHT << " x " << WIDTH << '\n';
 
     std::vector<bench_t> benchmarks = {
         // {"Black-Scholes (Optimized)",
@@ -157,13 +158,13 @@ int main() {
         //  &image_args_stu,
         //  &image_args_naive,
         //  BASELINE_IMAGE_PROC},
-        // {"Filter Gradient (Optimized)",
-        //  stu_filter_gradient_wrapper,
-        //  naive_filter_gradient_wrapper,
-        //  filter_gradient_check,
-        //  &filter_gradient_args_stu,
-        //  &filter_gradient_args_ref,
-        //  BASELINE_FILTER_GRADIENT}
+        {"Filter Gradient (Optimized)",
+         stu_filter_gradient_wrapper,
+         naive_filter_gradient_wrapper,
+         filter_gradient_check,
+         &filter_gradient_args_stu,
+         &filter_gradient_args_ref,
+         BASELINE_FILTER_GRADIENT}
     };
 
     std::cout << "\nRunning Benchmarks...\n";

@@ -11,9 +11,10 @@
 #include "matmul.h"
 #include "grff.h"
 #include "trace_replay.h"
+#include "filter_gradient.h"
 
-
-int main() {
+    int
+    main() {
     std::uint32_t seed = 12345u;
     // constexpr size_t relu_size = 1024000;
     // relu_args relu_args_naive;
@@ -27,7 +28,7 @@ int main() {
     // bitwise_args bitwise_args_student = bitwise_args_naive;
     // std::println("\tBitwise: vector length={}", bitwise_size);
 
-    // constexpr size_t matmul_size = 512; // TODO change to 512
+    // constexpr size_t matmul_size = 512;
     // matmul_args matmul_args_naive;
     // initialize_matmul(matmul_args_naive, matmul_size, seed);
     // matmul_args matmul_args_student = matmul_args_naive;
@@ -40,11 +41,25 @@ int main() {
     // std::cout << "\tGRFF: feature size=" << grff_args_naive.a_features.size()
     //           << '\n';
 
-    trace_replay_args trace_args_naive;
-    initialize_trace_replay(trace_args_naive, 1 << 16, 1 << 20, seed);
-    trace_replay_args trace_args_stu = trace_args_naive;
-    std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
-              << ", trace_length=" << trace_args_naive.trace.size() << '\n';
+    // trace_replay_args trace_args_naive;
+    // initialize_trace_replay(trace_args_naive, 1 << 16, 1 << 20, seed);
+    // trace_replay_args trace_args_stu = trace_args_naive;
+    // std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
+    //           << ", trace_length=" << trace_args_naive.trace.size() << '\n';
+
+    const std::size_t WIDTH = 1024;
+    const std::size_t HEIGHT = 1024;
+    filter_gradient_args filter_gradient_args_ref;
+    initialize_filter_gradient(&filter_gradient_args_ref,
+                               WIDTH,
+                               HEIGHT,
+                               seed);
+    // conversion of data structure for stu only
+    std::vector<pixel> target{}; // resized inside convert function
+    convert_data_struct(WIDTH, HEIGHT, filter_gradient_args_ref.data, target);
+    filter_gradient_args filter_gradient_args_stu = filter_gradient_args_ref;
+    filter_gradient_args_stu.converted_data = target;
+    std::cout << "\tFilter Gradient: " << HEIGHT << " x " << WIDTH << '\n';
 
     std::vector<bench_t> benchmarks = {
                 // {"ReLU (Optimized)",
@@ -75,13 +90,20 @@ int main() {
                 // &grff_args_stu,
                 // &grff_args_naive,
                 // BASELINE_GRFF},
-                {"Trace Replay (Optimized)",
-                stu_trace_replay_wrapper,
-                naive_trace_replay_wrapper,
-                trace_replay_check,
-                &trace_args_stu,
-                &trace_args_naive,
-                BASELINE_TRACE_REPLAY},
+                // {"Trace Replay (Optimized)",
+                // stu_trace_replay_wrapper,
+                // naive_trace_replay_wrapper,
+                // trace_replay_check,
+                // &trace_args_stu,
+                // &trace_args_naive,
+                // BASELINE_TRACE_REPLAY},
+                {"Filter Gradient (Optimized)",
+                 stu_filter_gradient_wrapper,
+                 naive_filter_gradient_wrapper,
+                 filter_gradient_check,
+                 &filter_gradient_args_stu,
+                 &filter_gradient_args_ref,
+                 BASELINE_FILTER_GRADIENT}
     };
     std::cout << "\nRunning Benchmarks...\n";
     std::cout << "--------------------------------------------------------\n";

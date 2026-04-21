@@ -21,9 +21,16 @@ struct data_struct {
     std::vector<float> i;
 };
 
+struct pixel {
+    float a,b,c,d,e,f,g,h,i;
+    pixel() : a(0), b(0), c(0), d(0), e(0), f(0), g(0), h(0), i(0) {}
+    pixel(float a, float b, float c, float d, float e, float f, float g, float h, float i)
+    : a(a), b(b), c(c), d(d), e(e), f(f), g(g), h(h), i(i) {}
+};
+
 struct filter_gradient_args {
     data_struct data; 
-    // TODO: You may want to add new params at the end...
+    std::vector<pixel> converted_data; // use this for stu
 
     std::size_t width;
     std::size_t height;
@@ -34,13 +41,15 @@ struct filter_gradient_args {
         : width(0), height(0), out(0.0f), epsilon(epsilon_in) {}
 };
 
+
 // TODO: You may need to add a function to convert data structure (not 
 // included in time measurement), then implement your version in 
 // stu_filter_gradient, whch is called by stu_filter_gradient_wrapper.
+void convert_data_struct(std::size_t width, std::size_t height, const data_struct &data, std::vector<pixel> &new_data);
 
 void naive_filter_gradient(float& out, const data_struct& data,
                    std::size_t width, std::size_t height);
-void stu_filter_gradient(float& out, const data_struct& data,
+void stu_filter_gradient(float& out, const std::vector<pixel>& data,
                    std::size_t width, std::size_t height);
 
 void naive_filter_gradient_wrapper(void* ctx);
