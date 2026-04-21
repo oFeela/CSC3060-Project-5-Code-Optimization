@@ -131,6 +131,7 @@ void naive_BlkSchls(std::vector<float> &CallOptionPrice,
     }
 }
 
+// TODO can precompute tables for exp, sqrt? and use asymptotic limits for CNDF
 void stu_BlkSchls(std::vector<float> &CallOptionPrice,
                   std::vector<float> &PutOptionPrice,
                   const std::vector<float> &spotPrice,
