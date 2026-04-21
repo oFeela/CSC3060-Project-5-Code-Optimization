@@ -42,6 +42,9 @@ set_source_files_properties(src/kernel/graph.cpp
 set_source_files_properties(src/kernel/filter_gradient.cpp 
     PROPERTIES COMPILE_FLAGS ""
 )
+set_source_files_properties(src/kernel/image_proc.cpp 
+    PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops -fprefetch-loop-arrays"
+)
 
 target_include_directories(kernels PUBLIC include)
 
