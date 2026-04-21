@@ -83,15 +83,16 @@ int main() {
     // std::cout << "\tImage Proc: " << image_args_naive.width << " x "
     //           << image_args_naive.height << '\n';
 
-    // const std::size_t WIDTH = 1024;
-    // const std::size_t HEIGHT = 1024;
-    // filter_gradient_args filter_gradient_args_ref;
-    // initialize_filter_gradient(&filter_gradient_args_ref,
-    //                            WIDTH,
-    //                            HEIGHT,
-    //                            seed);
-    // filter_gradient_args filter_gradient_args_stu = filter_gradient_args_ref;
-    // std::cout << "\tFilter Gradient: " << HEIGHT << " x " << WIDTH << '\n';
+    const std::size_t WIDTH = 1024;
+    const std::size_t HEIGHT = 1024;
+    filter_gradient_args filter_gradient_args_ref;
+    initialize_filter_gradient(&filter_gradient_args_ref, WIDTH, HEIGHT, seed);
+    // conversion of data structure for stu only
+    std::vector<pixel> target{}; // resized inside convert function
+    convert_data_struct(WIDTH, HEIGHT, filter_gradient_args_ref.data, target);
+    filter_gradient_args filter_gradient_args_stu = filter_gradient_args_ref;
+    filter_gradient_args_stu.converted_data = target;
+    std::cout << "\tFilter Gradient: " << HEIGHT << " x " << WIDTH << '\n';
 
     std::vector<bench_t> benchmarks = {
         // {"Black-Scholes (Optimized)",
@@ -108,34 +109,34 @@ int main() {
         //  &sparse_args_stu,
         //  &sparse_args,
         //  BASELINE_SPARSE_SPMM},
-        {"ReLU (Optimized)",
-         stu_relu_wrapper,
-         naive_relu_wrapper,
-         relu_check,
-         &relu_args_stu,
-         &relu_args_naive,
-         BASELINE_RELU},
-        {"Bitwise (Optimized)",
-         stu_bitwise_wrapper,
-         naive_bitwise_wrapper,
-         bitwise_check,
-         &bitwise_args_stu,
-         &bitwise_args_naive,
-         BASELINE_BITWISE},
-        {"MatMul (Optimized)",
-         stu_matmul_wrapper,
-         naive_matmul_wrapper,
-         matmul_check,
-         &matmul_args_stu,
-         &matmul_args_naive,
-         BASELINE_MATMUL},
-        {"Trace Replay (Optimized)",
-         stu_trace_replay_wrapper,
-         naive_trace_replay_wrapper,
-         trace_replay_check,
-         &trace_args_stu,
-         &trace_args_naive,
-         BASELINE_TRACE_REPLAY},
+        // {"ReLU (Optimized)",
+        //  stu_relu_wrapper,
+        //  naive_relu_wrapper,
+        //  relu_check,
+        //  &relu_args_stu,
+        //  &relu_args_naive,
+        //  BASELINE_RELU},
+        // {"Bitwise (Optimized)",
+        //  stu_bitwise_wrapper,
+        //  naive_bitwise_wrapper,
+        //  bitwise_check,
+        //  &bitwise_args_stu,
+        //  &bitwise_args_naive,
+        //  BASELINE_BITWISE},
+        // {"MatMul (Optimized)",
+        //  stu_matmul_wrapper,
+        //  naive_matmul_wrapper,
+        //  matmul_check,
+        //  &matmul_args_stu,
+        //  &matmul_args_naive,
+        //  BASELINE_MATMUL},
+        // {"Trace Replay (Optimized)",
+        //  stu_trace_replay_wrapper,
+        //  naive_trace_replay_wrapper,
+        //  trace_replay_check,
+        //  &trace_args_stu,
+        //  &trace_args_naive,
+        //  BASELINE_TRACE_REPLAY},
         // {"Graph (Optimized)",
         //  stu_graph_wrapper,
         //  naive_graph_wrapper,
@@ -143,13 +144,13 @@ int main() {
         //  &graph_args_stu,
         //  &graph_args_naive,
         //  BASELINE_GRAPH},
-        {"GRFF (Optimized)",
-         stu_grff_wrapper,
-         naive_grff_wrapper,
-         grff_check,
-         &grff_args_stu,
-         &grff_args_naive,
-         BASELINE_GRFF},
+        // {"GRFF (Optimized)",
+        //  stu_grff_wrapper,
+        //  naive_grff_wrapper,
+        //  grff_check,
+        //  &grff_args_stu,
+        //  &grff_args_naive,
+        //  BASELINE_GRFF},
         // {"Image Proc (Optimized)",
         //  stu_image_proc_wrapper,
         //  naive_image_proc_wrapper,
@@ -157,13 +158,13 @@ int main() {
         //  &image_args_stu,
         //  &image_args_naive,
         //  BASELINE_IMAGE_PROC},
-        // {"Filter Gradient (Optimized)",
-        //  stu_filter_gradient_wrapper,
-        //  naive_filter_gradient_wrapper,
-        //  filter_gradient_check,
-        //  &filter_gradient_args_stu,
-        //  &filter_gradient_args_ref,
-        //  BASELINE_FILTER_GRADIENT}
+        {"Filter Gradient (Optimized)",
+         stu_filter_gradient_wrapper,
+         naive_filter_gradient_wrapper,
+         filter_gradient_check,
+         &filter_gradient_args_stu,
+         &filter_gradient_args_ref,
+         BASELINE_FILTER_GRADIENT}
     };
 
     std::cout << "\nRunning Benchmarks...\n";
