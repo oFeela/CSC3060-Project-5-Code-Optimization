@@ -60,13 +60,13 @@ int main() {
     // std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
     //           << ", trace_length=" << trace_args_naive.trace.size() << '\n';
 
-    // constexpr std::size_t graph_node_count = 1024000;
-    // constexpr int graph_avg_degree = 8;
-    // graph_args graph_args_naive;
-    // initialize_graph(&graph_args_naive, graph_node_count, graph_avg_degree, seed);
-    // graph_args graph_args_stu = graph_args_naive;
-    // std::cout << "\tGraph: node_count=" << graph_node_count
-    //           << ", avg_degree=" << graph_avg_degree << '\n';
+    constexpr std::size_t graph_node_count = 1024000;
+    constexpr int graph_avg_degree = 8;
+    graph_args graph_args_naive;
+    initialize_graph(&graph_args_naive, graph_node_count, graph_avg_degree, seed);
+    graph_args graph_args_stu = graph_args_naive;
+    std::cout << "\tGraph: node_count=" << graph_node_count
+              << ", avg_degree=" << graph_avg_degree << '\n';
 
     constexpr std::size_t grff_size = 1024000;
     grff_args grff_args_naive;
@@ -130,20 +130,20 @@ int main() {
          &matmul_args_stu,
          &matmul_args_naive,
          BASELINE_MATMUL},
-        // {"Trace Replay (Optimized)",
-        //  stu_trace_replay_wrapper,
-        //  naive_trace_replay_wrapper,
-        //  trace_replay_check,
-        //  &trace_args_stu,
-        //  &trace_args_naive,
-        //  BASELINE_TRACE_REPLAY},
-        // {"Graph (Optimized)",
-        //  stu_graph_wrapper,
-        //  naive_graph_wrapper,
-        //  graph_check,
-        //  &graph_args_stu,
-        //  &graph_args_naive,
-        //  BASELINE_GRAPH},
+        {"Trace Replay (Optimized)",
+         stu_trace_replay_wrapper,
+         naive_trace_replay_wrapper,
+         trace_replay_check,
+         &trace_args_stu,
+         &trace_args_naive,
+         BASELINE_TRACE_REPLAY},
+        {"Graph (Optimized)",
+         stu_graph_wrapper,
+         naive_graph_wrapper,
+         graph_check,
+         &graph_args_stu,
+         &graph_args_naive,
+         BASELINE_GRAPH},
         {"GRFF (Optimized)",
          stu_grff_wrapper,
          naive_grff_wrapper,
