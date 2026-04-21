@@ -39,6 +39,9 @@ set_source_files_properties(src/kernel/trace_replay.cpp
 set_source_files_properties(src/kernel/graph.cpp 
     PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops -fprefetch-loop-arrays -mavx2"
 )
+set_source_files_properties(src/kernel/filter_gradient.cpp 
+    PROPERTIES COMPILE_FLAGS ""
+)
 
 target_include_directories(kernels PUBLIC include)
 

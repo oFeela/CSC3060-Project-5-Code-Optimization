@@ -79,57 +79,6 @@ void naive_grff(grff_args& args) {
 // TODO: Student Implementation
 // -------------------------------------------------------------------------
 void stu_grff(grff_args& args) {
-    #if 0 // naive one, for comparison, bro there are 7 INTIIALIZATIONS BRO
-    // TODO still same but with my comments
-    size_t n = args.a_features.size();
-    
-    // Intermediate buffers
-    std::vector<float> G(n), A_prime(n), Smooth_A(n), B_prime(n), C_prime(n), H(n), E(n);
-
-    // Stage 1: Gate
-    for (size_t i = 0; i < n; ++i) 
-        G[i] = 0.5f * ((args.a_features[i] * args.b_features[i]) / (1.0f + std::abs(args.a_features[i] * args.b_features[i])) + 1.0f);
-
-    // Stage 2: Update A (Residual)
-    for (size_t i = 0; i < n; ++i) 
-        A_prime[i] = args.a_features[i] + G[i];
-
-    // Stage 3: Global Feature Scaling
-    float sum_a = 0.0f;
-    for (size_t i = 0; i < n; ++i) {
-        sum_a += A_prime[i];
-    }
-    float avg_a = sum_a / static_cast<float>(n);
-
-    // Stage 4: Update A (Smooth)
-    Smooth_A[0] = A_prime[0];
-    for (size_t i = 1; i < n; ++i) {
-        Smooth_A[i] = (A_prime[i] + A_prime[i-1]) * 0.5f; 
-    }
-
-    // Stage 5: Update B (Suppression)
-    for (size_t i = 0; i < n; ++i) 
-        B_prime[i] = args.b_features[i] * (1.0f - G[i]) * avg_a;
-
-    // Stage 6: Context Integration 
-    for (size_t i = 0; i < n; ++i) 
-        C_prime[i] = args.c_features[i] + (Smooth_A[i] / (1.0f + std::abs(Smooth_A[i])));
-
-    // Stage 7: Hidden Interaction
-    for (size_t i = 0; i < n; ++i) 
-        H[i] = Smooth_A[i] * C_prime[i];
-
-    // Stage 8: Normalization
-    for (size_t i = 0; i < n; ++i) 
-        E[i] = (H[i] + B_prime[i]) / (1.0f + std::abs(Smooth_A[i]));
-
-    // Stage 9: Final Output (ReLU)
-    for (size_t i = 0; i < n; ++i) {
-        float result = C_prime[i] - E[i];
-        args.f_output[i] = std::max(result, 0.0f);
-    }
-    #endif
-
     #if 0 // better than naive, but 0.827x of the BASELINE
     float sum_a = 0.0f; // for Stage 3: Global Feature Scaling
     bool first = true; // my addition, for Stage 4: Update A (Smooth)
@@ -173,7 +122,95 @@ void stu_grff(grff_args& args) {
     }
     #endif
 
+    // NO VECTOR USED
+    // this is faster on my local machine, slower on server than below
+    #if 0
+    size_t n = args.a_features.size();
+    double sum_a = 0.0f;
+
+    // the rest
+    for (size_t i = 1; i < n; i++) {
+        float p = args.a_features[i] * args.b_features[i];
+        float G = 0.5f * (p / (1.0f + std::abs(p)) + 1.0f);
+        float A = args.a_features[i] + G; // A_prime
+
+        sum_a += A;
+    }
+    float avg_a = sum_a / static_cast<float>(n);
+    // above should be ok now! (i think, only 2 vector yayy)
+
+    for (size_t i = 0; i < n; i++) {
+        float p = args.a_features[i] * args.b_features[i];
+        float G = 0.5f * (p / (1.0f + std::abs(p)) + 1.0f);
+        float A = args.a_features[i] + G;
+        float SA;
+        if (i == 0) SA = A;
+        else {
+            float pp = args.a_features[i - 1] * args.b_features[i - 1];
+            float Gp = 0.5f * (pp / (1.0f + std::abs(pp)) + 1.0f);
+            float Ap = args.a_features[i - 1] + Gp;
+            SA = (A + Ap) * 0.5f;
+        } 
+
+        float B = args.b_features[i] * (1.0f - G) * avg_a;
+        float C = args.c_features[i] + (SA / (1.0f + std::abs(SA)));
+        float H = SA * C;
+        float E = (H + B) / (1.0f + std::abs(SA));
+        float res = C - E;
+        args.f_output[i] = std::max(res, 0.0f);
+    }
+    #endif
+
+    // 1 VECTOR
+    // FASTERST ON SERVER
+    // possibly because the server's cpu can't do floating point arith fast enough
+    // so storing the result in vector A is better
     #if 1
+    size_t n = args.a_features.size();
+    std::vector<float> A(n);
+    float sum_a = 0.0f;
+
+    for (size_t i = 0; i < n; i++) {
+        float p = args.a_features[i] * args.b_features[i];
+        float G = 0.5f * 
+        ((p) / 
+        (1.0f + std::abs(p)) + 1.0f);
+
+        A[i] = args.a_features[i] + G;
+        sum_a += A[i];
+    }
+    float avg_a = sum_a / static_cast<float>(n);
+
+    // first elem only
+    float p = args.a_features[0] * args.b_features[0];
+    float G = 0.5f * 
+    ((p) / 
+    (1.0f + std::abs(p)) + 1.0f);
+    float SA = A[0];
+    float B = args.b_features[0] * (1.0f - G) * avg_a;
+    float C = args.c_features[0] + (SA / (1.0f + std::abs(SA)));
+    float H = SA * C;
+    float E = (H + B) / (1.0f + std::abs(SA));
+    float res = C - E;
+    args.f_output[0] = std::max(res, 0.0f);
+
+    for (size_t i = 1; i < n; i++) {
+        float p = args.a_features[i] * args.b_features[i];
+        float G = 0.5f * 
+        ((p) / 
+        (1.0f + std::abs(p)) + 1.0f);
+
+        float SA = (A[i] + A[i - 1]) * 0.5f;
+        float B = args.b_features[i] * (1.0f - G) * avg_a;
+        float C = args.c_features[i] + (SA / (1.0f + std::abs(SA)));
+        float H = SA * C;
+        float E = (H + B) / (1.0f + std::abs(SA));
+        float res = C - E;
+        args.f_output[i] = std::max(res, 0.0f);
+    }
+    #endif
+
+    #if 0
     size_t n = args.a_features.size();
     std::vector<float> G(n), A(n);
     float sum_a = 0.0f;
