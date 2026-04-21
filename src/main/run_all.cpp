@@ -75,13 +75,13 @@ int main() {
     std::cout << "\tGRFF: feature size=" << grff_args_naive.a_features.size()
               << '\n';
 
-    // constexpr std::size_t image_width = 1024;
-    // constexpr std::size_t image_height = 1000;
-    // image_proc_args image_args_naive;
-    // initialize_image_proc(&image_args_naive, image_width, image_height, seed);
-    // image_proc_args image_args_stu = image_args_naive;
-    // std::cout << "\tImage Proc: " << image_args_naive.width << " x "
-    //           << image_args_naive.height << '\n';
+    constexpr std::size_t image_width = 1024;
+    constexpr std::size_t image_height = 1000;
+    image_proc_args image_args_naive;
+    initialize_image_proc(&image_args_naive, image_width, image_height, seed);
+    image_proc_args image_args_stu = image_args_naive;
+    std::cout << "\tImage Proc: " << image_args_naive.width << " x "
+              << image_args_naive.height << '\n';
 
     const std::size_t WIDTH = 1024;
     const std::size_t HEIGHT = 1024;
@@ -151,13 +151,13 @@ int main() {
          &grff_args_stu,
          &grff_args_naive,
          BASELINE_GRFF},
-        // {"Image Proc (Optimized)",
-        //  stu_image_proc_wrapper,
-        //  naive_image_proc_wrapper,
-        //  image_proc_check,
-        //  &image_args_stu,
-        //  &image_args_naive,
-        //  BASELINE_IMAGE_PROC},
+        {"Image Proc (Optimized)",
+         stu_image_proc_wrapper,
+         naive_image_proc_wrapper,
+         image_proc_check,
+         &image_args_stu,
+         &image_args_naive,
+         BASELINE_IMAGE_PROC},
         {"Filter Gradient (Optimized)",
          stu_filter_gradient_wrapper,
          naive_filter_gradient_wrapper,
