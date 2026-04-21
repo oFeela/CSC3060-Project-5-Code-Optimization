@@ -54,11 +54,11 @@ int main() {
     matmul_args matmul_args_stu = matmul_args_naive;
     std::cout << "\tMatMul: n=" << matmul_args_naive.n << '\n';
 
-    trace_replay_args trace_args_naive;
-    initialize_trace_replay(trace_args_naive, 1 << 16, 1 << 20, seed);
-    trace_replay_args trace_args_stu = trace_args_naive;
-    std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
-              << ", trace_length=" << trace_args_naive.trace.size() << '\n';
+    // trace_replay_args trace_args_naive;
+    // initialize_trace_replay(trace_args_naive, 1 << 16, 1 << 20, seed);
+    // trace_replay_args trace_args_stu = trace_args_naive;
+    // std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
+    //           << ", trace_length=" << trace_args_naive.trace.size() << '\n';
 
     // constexpr std::size_t graph_node_count = 1024000;
     // constexpr int graph_avg_degree = 8;
@@ -109,27 +109,27 @@ int main() {
         //  &sparse_args_stu,
         //  &sparse_args,
         //  BASELINE_SPARSE_SPMM},
-        // {"ReLU (Optimized)",
-        //  stu_relu_wrapper,
-        //  naive_relu_wrapper,
-        //  relu_check,
-        //  &relu_args_stu,
-        //  &relu_args_naive,
-        //  BASELINE_RELU},
-        // {"Bitwise (Optimized)",
-        //  stu_bitwise_wrapper,
-        //  naive_bitwise_wrapper,
-        //  bitwise_check,
-        //  &bitwise_args_stu,
-        //  &bitwise_args_naive,
-        //  BASELINE_BITWISE},
-        // {"MatMul (Optimized)",
-        //  stu_matmul_wrapper,
-        //  naive_matmul_wrapper,
-        //  matmul_check,
-        //  &matmul_args_stu,
-        //  &matmul_args_naive,
-        //  BASELINE_MATMUL},
+        {"ReLU (Optimized)",
+         stu_relu_wrapper,
+         naive_relu_wrapper,
+         relu_check,
+         &relu_args_stu,
+         &relu_args_naive,
+         BASELINE_RELU},
+        {"Bitwise (Optimized)",
+         stu_bitwise_wrapper,
+         naive_bitwise_wrapper,
+         bitwise_check,
+         &bitwise_args_stu,
+         &bitwise_args_naive,
+         BASELINE_BITWISE},
+        {"MatMul (Optimized)",
+         stu_matmul_wrapper,
+         naive_matmul_wrapper,
+         matmul_check,
+         &matmul_args_stu,
+         &matmul_args_naive,
+         BASELINE_MATMUL},
         // {"Trace Replay (Optimized)",
         //  stu_trace_replay_wrapper,
         //  naive_trace_replay_wrapper,
@@ -144,13 +144,13 @@ int main() {
         //  &graph_args_stu,
         //  &graph_args_naive,
         //  BASELINE_GRAPH},
-        // {"GRFF (Optimized)",
-        //  stu_grff_wrapper,
-        //  naive_grff_wrapper,
-        //  grff_check,
-        //  &grff_args_stu,
-        //  &grff_args_naive,
-        //  BASELINE_GRFF},
+        {"GRFF (Optimized)",
+         stu_grff_wrapper,
+         naive_grff_wrapper,
+         grff_check,
+         &grff_args_stu,
+         &grff_args_naive,
+         BASELINE_GRFF},
         // {"Image Proc (Optimized)",
         //  stu_image_proc_wrapper,
         //  naive_image_proc_wrapper,
