@@ -137,7 +137,7 @@ void convert_data_struct(std::size_t width, std::size_t height,
 void stu_filter_gradient(float& out, const std::vector<pixel>& data,
                    std::size_t width, std::size_t height) {
 
-    #if 1 // AI multithread // BUG geo learn this please
+    #if 1 // TODO tell geo learn this please
     const std::size_t H = height;
     const std::size_t W = width;
     constexpr float inv9 = 1.0f / 9.0f;
@@ -256,7 +256,6 @@ void stu_filter_gradient(float& out, const std::vector<pixel>& data,
         for (std::size_t x = 1; x + 1 < W; ++x) {
 
             double sum_a = 0.0, sum_b = 0.0, sum_c = 0.0;
-            // TODO idk if this got optimized or nah
             for (int dy = -1; dy <= 1; ++dy) {
                 const std::size_t row = (y + dy) * W;
                 for (int dx = -1; dx <= 1; ++dx) {
