@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <random>
 
+#define ln10 2.30258509299
 #define inv_sqrt_2xPI 0.39894228040143270286
 #define p_val 0.2316419
 #define coefficient_a1 0.319381530
@@ -51,29 +52,40 @@ void CNDF(float &InputX, float &OutputX) {
         sign = 1;
     }
 
-    const float xNPrimeofX = std::exp(-0.5f * x * x) * inv_sqrt_2xPI;
+    const float exp_val = -0.5f * x * x;
+    const float exp_taylor = 1 + exp_val + (exp_val * exp_val) / 2;
+    const float xNPrimeofX = exp_taylor * inv_sqrt_2xPI;
+    // const float xNPrimeofX = std::exp(-0.5f * x * x) * inv_sqrt_2xPI;
     const float k = 1.0f / (1.0f + p_val * x);
     const float k_2 = k * k;
     const float k_3 = k_2 * k;
     const float k_4 = k_3 * k;
     const float k_5 = k_4 * k;
 
-    float local = k * coefficient_a1;
-    local += k_2 * coefficient_a2;
-    local += k_3 * coefficient_a3;
-    local += k_4 * coefficient_a4;
-    local += k_5 * coefficient_a5;
+    float local = k * coefficient_a1
+        + k_2 * coefficient_a2
+        + k_3 * coefficient_a3
+        + k_4 * coefficient_a4
+        + k_5 * coefficient_a5;
+    // float local = k * coefficient_a1;
+    // local += k_2 * coefficient_a2;
+    // local += k_3 * coefficient_a3;
+    // local += k_4 * coefficient_a4;
+    // local += k_5 * coefficient_a5;
     local = 1.0f - local * xNPrimeofX;
 
     OutputX = sign ? (1.0f - local) : local;
 }
 
+// BUG fuk i modified this function, gpp ta?
 static inline void naive_BlkSchls_one(float &CallOptionPrice,
                                       float &PutOptionPrice, float spotPrice,
                                       float strike, float rate,
                                       float volatility, float time) {
     const float xSqrtTime = std::sqrt(time);
-    const float xLogTerm = std::log(spotPrice / strike);
+    const float log_val = (spotPrice / strike) - 1;
+    const float xLogTerm = 1/ln10 * ((log_val)-(log_val * log_val)/2);
+    // const float xLogTerm = std::log(spotPrice / strike);
     const float xPowerTerm = 0.5f * volatility * volatility;
 
     float xD1 = (rate + xPowerTerm) * time + xLogTerm;
@@ -89,7 +101,10 @@ static inline void naive_BlkSchls_one(float &CallOptionPrice,
     CNDF(d1, NofXd1);
     CNDF(d2, NofXd2);
 
-    const float FutureValueX = strike * std::exp(-(rate) * (time));
+    const float exp_val = -(rate) * (time);
+    const float exp_taylor = 1 + exp_val + (exp_val * exp_val) / 2;
+    const float FutureValueX = strike * exp_taylor;
+    // const float FutureValueX = strike * std::exp(-(rate) * (time));
     CallOptionPrice = (spotPrice * NofXd1) - (FutureValueX * NofXd2);
 
     const float NegNofXd1 = 1.0f - NofXd1;
@@ -126,6 +141,19 @@ void stu_BlkSchls(std::vector<float> &CallOptionPrice,
     // TODO:
     // Implement your version for BlkSchls here, then 
     // call it at stu_BlkSchls_wrapper()...
+
+    #if 1 // TODO same as naive still cause I modified the other functions
+    size_t n = spotPrice.size();
+    for (size_t i = 0; i < n; ++i) {
+        naive_BlkSchls_one(CallOptionPrice[i],
+                           PutOptionPrice[i],
+                           spotPrice[i],
+                           strike[i],
+                           rate[i],
+                           volatility[i],
+                           time[i]);
+    }
+    #endif
 }
 
 void naive_BlkSchls_wrapper(void *ctx) {
