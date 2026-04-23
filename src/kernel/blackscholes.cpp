@@ -77,7 +77,7 @@ void CNDF(float &InputX, float &OutputX) {
     OutputX = sign ? (1.0f - local) : local;
 }
 
-// BUG fuk i modified this function, gpp ta?
+// BUG i modified this function, it's okay?
 static inline void naive_BlkSchls_one(float &CallOptionPrice,
                                       float &PutOptionPrice, float spotPrice,
                                       float strike, float rate,
