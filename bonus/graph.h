@@ -23,6 +23,13 @@ struct Graph {
     Node* nodes;
 };
 
+// struct OptimizedEdge {
+//     int w;
+//     int next;
+
+//     OptimizedEdge(int w, int next) : w(w), next(next) {}
+// };
+
 // Optimized graph
 struct OptimizedGraph {
     int n;
@@ -35,6 +42,11 @@ struct OptimizedGraph {
     // NOT USED!!! it was just for experiment
     std::vector<int> sum;
     uint64_t tot_sum;
+
+    // my first approach:
+    // adjacency list
+    // std::vector<std::vector<OptimizedEdge>> adj;
+    // realized: might be too slow because not contiguous for the node traversal...
 };
 
 struct graph_args {

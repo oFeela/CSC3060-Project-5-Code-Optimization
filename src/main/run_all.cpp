@@ -30,12 +30,12 @@ int main() {
     std::cout << "\tBlack-Scholes options: " << black_args.spot_price.size()
               << '\n';
 
-    // sparse_spmm_args sparse_args;
-    // initialize_spmm(sparse_args, 512, 512, -1, {}, seed);
-    // sparse_spmm_args sparse_args_stu = sparse_args;
-    // std::cout << "\tSparse A (CSR): " << sparse_args.csr.rows << " x "
-    //           << sparse_args.csr.cols
-    //           << ", nnz=" << sparse_args.csr.values.size() << '\n';
+    sparse_spmm_args sparse_args;
+    initialize_spmm(sparse_args, 512, 512, -1, {}, seed);
+    sparse_spmm_args sparse_args_stu = sparse_args;
+    std::cout << "\tSparse A (CSR): " << sparse_args.csr.rows << " x "
+              << sparse_args.csr.cols
+              << ", nnz=" << sparse_args.csr.values.size() << '\n';
 
     // constexpr size_t relu_size = 1024000;
     // relu_args relu_args_naive;
@@ -95,20 +95,20 @@ int main() {
     // std::cout << "\tFilter Gradient: " << HEIGHT << " x " << WIDTH << '\n';
 
     std::vector<bench_t> benchmarks = {
-        {"Black-Scholes (Optimized)",
-         stu_BlkSchls_wrapper,
-         naive_BlkSchls_wrapper,
-         BlkSchls_check,
-         &black_args_stu,
-         &black_args,
-         BASELINE_BLACKSCHOLES},
-        // {"Sparse SpMM (Optimized)",
-        //  stu_sparse_spmm_wrapper,
-        //  naive_sparse_spmm_wrapper,
-        //  sparse_spmm_check,
-        //  &sparse_args_stu,
-        //  &sparse_args,
-        //  BASELINE_SPARSE_SPMM},
+        // {"Black-Scholes (Optimized)",
+        //  stu_BlkSchls_wrapper,
+        //  naive_BlkSchls_wrapper,
+        //  BlkSchls_check,
+        //  &black_args_stu,
+        //  &black_args,
+        //  BASELINE_BLACKSCHOLES},
+        {"Sparse SpMM (Optimized)",
+         stu_sparse_spmm_wrapper,
+         naive_sparse_spmm_wrapper,
+         sparse_spmm_check,
+         &sparse_args_stu,
+         &sparse_args,
+         BASELINE_SPARSE_SPMM},
         // {"ReLU (Optimized)",
         //  stu_relu_wrapper,
         //  naive_relu_wrapper,

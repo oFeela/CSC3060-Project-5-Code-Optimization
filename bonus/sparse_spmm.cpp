@@ -205,7 +205,7 @@ void csr_spmm(const CSRMatrix &csr, const std::vector<float> &dense_t,
             const float *bt_row = &dense_t[n * cols];
             float acc = 0.0f;
             for (int p = csr.row_ptr[r]; p < csr.row_ptr[r + 1]; ++p) {
-                acc += csr.values[p] * bt_row[csr.col_idx[p]]; // k = csr.col_idx[p]
+                acc += csr.values[p] * bt_row[csr.col_idx[p]];
             }
             out_row[n] = acc;
         }
@@ -215,49 +215,8 @@ void csr_spmm(const CSRMatrix &csr, const std::vector<float> &dense_t,
 void csr_spmm_stu(const CSRMatrix &csr, const std::vector<float> &dense_t,
               std::vector<float> &out) {
 
-    #if 1 // same validation code
-    if (!validate_csr(csr)) {
-        throw std::invalid_argument("csr_spmm: invalid CSR matrix.");
-    }
-    const size_t rows = csr.rows;
-    const size_t cols = csr.cols;
-    if (rows == 0 || cols == 0) {
-        if (!dense_t.empty() || !out.empty()) {
-            throw std::invalid_argument(
-                "csr_spmm: non-empty dense buffers for empty CSR shape.");
-        }
-        return;
-    }
-    if (dense_t.size() % cols != 0) {
-        throw std::invalid_argument(
-            "csr_spmm: dense_t.size() must be a multiple of csr.cols.");
-    }
-    const size_t dense_cols = dense_t.size() / cols;
-    if (dense_cols == 0) {
-        throw std::invalid_argument("csr_spmm: dense_cols must be positive.");
-    }
-    if (out.size() != rows * dense_cols) {
-        throw std::invalid_argument("csr_spmm: out size mismatch.");
-    }
-    #endif
+    // TODO: implement it here!!!
 
-    // iterate through dense_cols of B first
-    for (size_t j = 0; j < dense_cols; ++j) {
-        // to keep bt_row in cache coz we paid for random access misses already
-        const float* bt_row = &dense_t[j * cols]; 
-
-        // iterate through rows of A
-        for (size_t i = 0; i < rows; ++i){
-            size_t p = csr.row_ptr[i];
-            size_t end_p = csr.row_ptr[i + 1];
-            float acc = 0.0f;
-            for (; p < end_p; ++p){
-                size_t k = csr.col_idx[p];
-                acc += csr.values[p] * bt_row[k];
-            }
-            out[i * dense_cols + j] = acc;
-        }
-    }
 }
 
 void naive_sparse_spmm_wrapper(void *ctx) {

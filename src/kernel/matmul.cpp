@@ -1,10 +1,10 @@
 #include "matmul.h"
+
 #include <algorithm>
 #include <cmath>
 #include <random>
 #include <stdexcept>
 #include <vector>
-#include <thread>
 
 void initialize_matmul(matmul_args& args, int n, uint32_t seed) {
     if (n <= 0) {
@@ -49,91 +49,35 @@ void stu_matmul(std::vector<float>& C,
                 const std::vector<float>& A,
                 const std::vector<float>& B,
                 int n) {
-    constexpr int block_size = 1; // TODO change later
-
-    #if 0 // FAILED TOO simple just unroll and accumulate
-    constexpr int unroll_factor = 4; // modify code if you modify this
+    #if 1
     std::fill(C.begin(), C.end(), 0.0f);
 
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            
-            // using unrolling factor 4
-            float sum,sum1,sum2,sum3;
-            sum = sum1 = sum2 = sum3 = 0.0f;
-
-            int k = 0;
-            for (; k + unroll_factor-1 < n; k += unroll_factor){
-                sum += A[i * n + k] * B[k * n + j];
-                sum1 += A[i * n + (k+1)] * B[(k+1) * n + j];
-                sum2 += A[i * n + (k+2)] * B[(k+2) * n + j];
-                sum3 += A[i * n + (k+3)] * B[(k+3) * n + j];
+    for (int r = 0; r < n; r++) {
+        for (int k = 0; k < n; k++) {
+            for (int c = 0; c + 7 < n; c += 8) {
+                C[r * n + c] += A[r * n + k] * B[k * n + c + 0];
+                C[r * n + c + 1] += A[r * n + k] * B[k * n + c + 1];
+                C[r * n + c + 2] += A[r * n + k] * B[k * n + c + 2];
+                C[r * n + c + 3] += A[r * n + k] * B[k * n + c + 3];
+                C[r * n + c + 4] += A[r * n + k] * B[k * n + c + 4];
+                C[r * n + c + 5] += A[r * n + k] * B[k * n + c + 5];
+                C[r * n + c + 6] += A[r * n + k] * B[k * n + c + 6];
+                C[r * n + c + 7] += A[r * n + k] * B[k * n + c + 7];
+                // C[r * n + c + 8] += A[r * n + k] * B[k * n + c + 8];
+                // C[r * n + c + 9] += A[r * n + k] * B[k * n + c + 9];
+                // C[r * n + c + 10] += A[r * n + k] * B[k * n + c + 10];
+                // C[r * n + c + 11] += A[r * n + k] * B[k * n + c + 11];
+                // C[r * n + c + 12] += A[r * n + k] * B[k * n + c + 12];
+                // C[r * n + c + 13] += A[r * n + k] * B[k * n + c + 13];
+                // C[r * n + c + 14] += A[r * n + k] * B[k * n + c + 14];
+                // C[r * n + c + 15] += A[r * n + k] * B[k * n + c + 15];
             }
-            for (; k < n; ++k){
-                sum += A[i * n + k] * B[k * n + j];
-            }
-            C[i * n + j] = sum + sum1 + sum2 + sum3;
         }
     }
     #endif
-
-    #if 0 // SP float, i-j-k inner loop
-    // std::fill(C.begin(), C.end(), 0.0f); // zeros out first
-    std::vector<double> C_double(C.size(), 0.0);
-
-    for (int start_i = 0; start_i < n; start_i += block_size) {
-        int end_i = std::min(n, start_i + block_size);
-        for (int start_j = 0; start_j < n; start_j += block_size) {
-            int end_j = std::min(n, start_j + block_size);
-            for (int start_k = 0; start_k < n; start_k += block_size) {
-                int end_k = std::min(n, start_k + block_size);
-
-                for (int i = start_i; i < end_i; i++) {
-                    for (int j = start_j; j < end_j; j++) {
-                        double sum = C_double[i * n + j]; // float
-                        for (int k = start_k; k < end_k; k++) {
-                            sum += (double) A[i * n + k] * B[k * n + j];
-                        }
-                        C_double[i * n + j] = sum;
-                    }
-                }
-            }
-        }
-    }
-    for (size_t i = 0; i < C.size(); i++) {
-        C[i] = static_cast<float>(C_double[i]);
-    }
-    #endif
-
-    #if 0 // TODO Double Precision, i-k-j inner loop. MUCH FASTER but why???
-    std::vector<double> C_double(C.size(), 0.0);
-
-    for (int start_i = 0; start_i < n; start_i += block_size) {
-        int end_i = std::min(n, start_i + block_size);
-        for (int start_k = 0; start_k < n; start_k += block_size) {
-            int end_k = std::min(n, start_k + block_size);
-            for (int start_j = 0; start_j < n; start_j += block_size) {
-                int end_j = std::min(n, start_j + block_size);
-
-                for (int i = start_i; i < end_i; ++i) {
-                    for (int k = start_k; k < end_k; ++k) {
-                        double a_val = A[i * n + k]; // promote to double
-                        for (int j = start_j; j < end_j; ++j) {
-                            C_double[i * n + j] += a_val * B[k * n + j];
-                        }
-                    }
-                }
-            }
-        }
-    }
-    for (size_t i = 0; i < C.size(); i++) {
-        C[i] = static_cast<float>(C_double[i]);
-    }
-    #endif  
-
+     
+    // precision loss
     #if 0
-    // std::fill(C.begin(), C.end(), 0.0f);
-
     std::vector<float> BT(n * n);
     for (int r = 0; r < n; r++) {
         for (int c = 0; c < n; c++) {
@@ -144,51 +88,19 @@ void stu_matmul(std::vector<float>& C,
     for (int r = 0; r < n; r++) {
         for (int c = 0; c < n; c++) {
             float sum = 0.0f;
-            for (int k = 0; k < n; k++) {
+            for (int k = 0; k + 7 < n; k += 8) {
                 sum += A[r * n + k] * BT[c * n + k];
+                sum += A[r * n + k + 1] * BT[c * n + k + 1];
+                sum += A[r * n + k + 2] * BT[c * n + k + 2];
+                sum += A[r * n + k + 3] * BT[c * n + k + 3];
+                sum += A[r * n + k + 4] * BT[c * n + k + 4];
+                sum += A[r * n + k + 5] * BT[c * n + k + 5];
+                sum += A[r * n + k + 6] * BT[c * n + k + 6];
+                sum += A[r * n + k + 7] * BT[c * n + k + 7];
             }
             C[r * n + c] = sum;
         }
     }
-
-    (void)block_size;
-    #endif
-
-    // multithreading insane
-    #if 1
-    unsigned int num_threads = std::thread::hardware_concurrency();
-
-    std::vector<float> BT(n * n);
-    for (int r = 0; r < n; r++) {
-        for (int c = 0; c < n; c++) {
-            BT[r * n + c] = B[c * n + r];
-        }
-    }
-
-    std::vector<std::thread> threads;
-    size_t rows_per_thread = n / num_threads;
-
-    for (unsigned int t = 0; t < num_threads; t++) {
-        int start_row = t * rows_per_thread;
-        int end_row = (t == num_threads - 1) ? n : start_row + rows_per_thread;
-        
-        threads.emplace_back([&, start_row, end_row]() {
-            for (int r = start_row; r < end_row; r++) {
-                for (int c = 0; c < n; c++) {
-                    float sum = 0.0f;
-                    for (int k = 0; k < n; k++) {
-                        sum += A[r * n + k] * BT[c * n + k];
-                    }
-                    C[r * n + c] = sum;
-                }
-            }
-        });
-    }
-
-    for (auto& t : threads) {
-        t.join();
-    }
-    (void)block_size;
     #endif
 }
 

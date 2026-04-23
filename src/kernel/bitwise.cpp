@@ -4,7 +4,6 @@
 #include <cstring>
 #include <limits>
 #include <random>
-#include <thread>
 
 void initialize_bitwise(bitwise_args *args, const size_t size,
                                   const std::uint_fast64_t seed) {
@@ -55,100 +54,62 @@ void naive_bitwise(std::span<std::int8_t> result,
     }
 }
 
-// TODO: Optimize the bitwise function
-// TODO: TRY SIMD WITH HIGHER COUNT
-// TODO: TRY MULTITHREADING SINCE DATA IS INDEPENDENT, NO RACING CONDS
 void stu_bitwise(std::span<std::int8_t> result, std::span<const std::int8_t> a,
                  std::span<const std::int8_t> b) {
-    // Implement your version...
     const std::size_t n = std::min({result.size(), a.size(), b.size()});
     std::size_t i = 0;
 
     // explicit call for prefetch: __builtin_prefetch(addr, rw, locality)
-    // loops prefetch alr done by the flag in CMakeLists.txt
 
+    #if 1
     // 16 at a time
-    // constexpr __uint128_t kMaskLoP128 = (__uint128_t)0x5A5A5A5A5A5A5A5A << 64 | 0x5A5A5A5A5A5A5A5A;
-    // constexpr __uint128_t kMaskHi128 = (__uint128_t)0xC3C3C3C3C3C3C3C3 << 64 | 0xC3C3C3C3C3C3C3C3;
+    constexpr __uint128_t mask1 = (__uint128_t)0x8181818181818181 << 64 | 0x8181818181818181;
+    constexpr __uint128_t mask2 = (__uint128_t)0x1818181818181818 << 64 | 0x1818181818181818;
+    constexpr __uint128_t mask3 = (__uint128_t)0x2424242424242424 << 64 | 0x2424242424242424;
 
-    // for (; i + 15 < n; i += 16) {
-    //     __uint128_t ap, bp;
-    //     memcpy(&ap, &a[i], 16);
-    //     memcpy(&bp, &b[i], 16);
+    for (; i + 15 < n; i += 16) {
+        __uint128_t ap, bp;
+        memcpy(&ap, &a[i], 16);
+        memcpy(&bp, &b[i], 16);
+
+        __uint128_t either = ap | bp;
+        __uint128_t res = ((~either) & mask1) | (either & mask2) | (mask3);
         
-    //     __uint128_t shared = ap & bp;
-    //     __uint128_t either = ap | bp;
-    //     __uint128_t diff = ap ^ bp;
-    //     __uint128_t mixed0 = (diff & kMaskLoP128) | (~shared & ~kMaskLoP128);
-    //     __uint128_t mixed1 = ((either ^ kMaskHi128) & (shared | ~kMaskHi128)) ^ diff;
+        memcpy(&result[i], &res, 16);
+    }
+
+    for (; i < n; i++) {
+        const auto ua = static_cast<std::uint8_t>(a[i]);
+        const auto ub = static_cast<std::uint8_t>(b[i]);
+
+        const auto either = ua | ub;
+        const auto bitresult = (((~either) & 0x81u) | (either & 0x18u) | (0x24u));
+        result[i] = static_cast<std::uint8_t>(bitresult);
+    }
+    #endif
+
+    #if 0
+    // 16 at a time
+    constexpr __uint128_t kMaskLoP128 = (__uint128_t)0x5A5A5A5A5A5A5A5A << 64 | 0x5A5A5A5A5A5A5A5A;
+    constexpr __uint128_t kMaskHi128 = (__uint128_t)0xC3C3C3C3C3C3C3C3 << 64 | 0xC3C3C3C3C3C3C3C3;
+
+    for (; i + 15 < n; i += 16) {
+        __uint128_t ap, bp;
+        memcpy(&ap, &a[i], 16);
+        memcpy(&bp, &b[i], 16);
         
-    //     __uint128_t res = mixed0 ^ mixed1;
+        __uint128_t shared = ap & bp;
+        __uint128_t either = ap | bp;
+        __uint128_t diff = ap ^ bp;
+        __uint128_t mixed0 = (diff & kMaskLoP128) | (~shared & ~kMaskLoP128);
+        __uint128_t mixed1 = ((either ^ kMaskHi128) & (shared | ~kMaskHi128)) ^ diff;
         
-    //     memcpy(&result[i], &res, 16);
-    // }
-
-    // // 8 at a time
-    // constexpr std::uint64_t kMaskLo64 = 0x5A5A5A5A5A5A5A5Au;
-    // constexpr std::uint64_t kMaskHi64 = 0xC3C3C3C3C3C3C3C3u;
-    // for (; i + 7 < n; i += 8) {
-    //     std::uint64_t ap, bp;
-    //     // get four elements starting from curr
-    //     memcpy(&ap, &a[i], 8);
-    //     memcpy(&bp, &b[i], 8);
-
-    //     std::uint64_t shared = ap & bp;
-    //     std::uint64_t either = ap | bp;
-    //     std::uint64_t diff = ap ^ bp;
-    //     std::uint64_t mixed0 = (diff & kMaskLo64) | (~shared & ~kMaskLo64);
-    //     std::uint64_t mixed1 = ((either ^ kMaskHi64) & (shared | ~kMaskHi64)) ^ diff;
+        __uint128_t res = mixed0 ^ mixed1;
         
-    //     std::uint64_t res = mixed0 ^ mixed1;
-
-    //     memcpy(&result[i], &res, 8);
-    // }
-
-    // // 4 at a time
-    // constexpr std::uint32_t kMaskLo32 = 0x5A5A5A5Au;
-    // constexpr std::uint32_t kMaskHi32 = 0xC3C3C3C3u;
-    // for (; i + 3 < n; i += 4) {
-    //     std::uint32_t ap, bp;
-    //     // get four elements starting from curr
-    //     memcpy(&ap, &a[i], 4);
-    //     memcpy(&bp, &b[i], 4);
-
-    //     std::uint32_t shared = ap & bp;
-    //     std::uint32_t either = ap | bp;
-    //     std::uint32_t diff = ap ^ bp;
-    //     std::uint32_t mixed0 = (diff & kMaskLo32) | (~shared & ~kMaskLo32);
-    //     std::uint32_t mixed1 = ((either ^ kMaskHi32) & (shared | ~kMaskHi32)) ^ diff;
-        
-    //     std::uint32_t res = mixed0 ^ mixed1;
-
-    //     memcpy(&result[i], &res, 4);
-    // }
-
-    // // 2 at a time
-    // constexpr std::uint16_t kMaskLo16 = 0x5A5Au;
-    // constexpr std::uint16_t kMaskHi16 = 0xC3C3u;
-    // for (; i + 1 < n; i += 2) {
-    //     std::uint16_t ap, bp;
-    //     // get four elements starting from curr
-    //     memcpy(&ap, &a[i], 2);
-    //     memcpy(&bp, &b[i], 2);
-
-    //     std::uint16_t shared = ap & bp;
-    //     std::uint16_t either = ap | bp;
-    //     std::uint16_t diff = ap ^ bp;
-    //     std::uint16_t mixed0 = (diff & kMaskLo16) | (~shared & ~kMaskLo16);
-    //     std::uint16_t mixed1 = ((either ^ kMaskHi16) & (shared | ~kMaskHi16)) ^ diff;
-        
-    //     std::uint16_t res = mixed0 ^ mixed1;
-
-    //     memcpy(&result[i], &res, 2);
-    // }
+        memcpy(&result[i], &res, 16);
+    }
 
     // leftovers or simply just naive one, preferred with flags on! (-O3)
-    #if 0
     constexpr std::uint8_t MaskLo = 0x5Au;
     constexpr std::uint8_t MaskHi = 0xC3u;
     for (; i < n; i++) {
@@ -164,62 +125,6 @@ void stu_bitwise(std::span<std::int8_t> result, std::span<const std::int8_t> a,
             ((either ^ MaskHi) & (shared | ~MaskHi)) ^ diff);
 
         result[i] = static_cast<std::int8_t>(mixed0 ^ mixed1);
-    }
-    #endif
-
-    #if 1
-    // 16 at a time
-    // constexpr __uint128_t mask1 = (__uint128_t)0x8181818181818181 << 64 | 0x8181818181818181;
-    // constexpr __uint128_t mask2 = (__uint128_t)0x1818181818181818 << 64 | 0x1818181818181818;
-    // constexpr __uint128_t mask3 = (__uint128_t)0x2424242424242424 << 64 | 0x2424242424242424;
-
-    // for (; i + 15 < n; i += 16) {
-    //     __uint128_t ap, bp;
-    //     memcpy(&ap, &a[i], 16);
-    //     memcpy(&bp, &b[i], 16);
-
-    //     __uint128_t either = ap | bp;
-    //     __uint128_t res = ((~either) & mask1) | (either & mask2) | (mask3);
-        
-    //     memcpy(&result[i], &res, 16);
-    // }
-
-    // from a friend, he really found an equivalent expression wow
-    for (; i < n; i++) {
-        const auto ua = static_cast<std::uint8_t>(a[i]);
-        const auto ub = static_cast<std::uint8_t>(b[i]);
-
-        const auto either = ua | ub;
-        const auto bitresult = (((~either) & 0x81u) | (either & 0x18u) | (0x24u));
-        result[i] = static_cast<std::uint8_t>(bitresult);
-    }
-    #endif
-
-
-    #if 0
-    unsigned int num_threads = std::thread::hardware_concurrency();
-    std::vector<std::thread> threads;
-    
-    size_t chunk_size = n / num_threads;
-    
-    for (unsigned int t = 0; t < num_threads; t++) {
-        size_t start = t * chunk_size;
-        size_t end = (t == num_threads - 1) ? n : start + chunk_size;
-        
-        threads.emplace_back([&, start, end]() {
-            for (size_t i = start; i < end; i++) {
-                const auto ua = static_cast<uint8_t>(a[i]);
-                const auto ub = static_cast<uint8_t>(b[i]);
-                
-                const auto either = ua | ub;
-                const auto bitresult = (((~either) & 0x81u) | (either & 0x18u) | (0x24u));
-                result[i] = static_cast<uint8_t>(bitresult);
-            }
-        });
-    }
-    
-    for (auto& t : threads) {
-        t.join();
     }
     #endif
 }
