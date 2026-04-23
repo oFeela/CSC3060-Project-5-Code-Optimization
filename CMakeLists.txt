@@ -20,45 +20,12 @@ target_compile_options(kernels
     PRIVATE
         -ffast-math -O2 -Wall -g -fno-omit-frame-pointer
 )
-
-set_source_files_properties(src/kernel/relu.cpp 
-    PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops -fprefetch-loop-arrays"
-)
-set_source_files_properties(src/kernel/bitwise.cpp 
-    PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops -fprefetch-loop-arrays"
-)
-set_source_files_properties(src/kernel/matmul.cpp 
-    PROPERTIES COMPILE_FLAGS "-O3 -funroll-loops"
-)
-set_source_files_properties(src/kernel/grff.cpp 
-    PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops -fprefetch-loop-arrays"
-)
-set_source_files_properties(src/kernel/trace_replay.cpp 
-    PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops -fprefetch-loop-arrays"
-)
-set_source_files_properties(src/kernel/graph.cpp 
-    PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops -fprefetch-loop-arrays -mavx2"
-)
-set_source_files_properties(src/kernel/filter_gradient.cpp 
-    PROPERTIES COMPILE_FLAGS ""
-)
-set_source_files_properties(src/kernel/image_proc.cpp 
-    PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops -fprefetch-loop-arrays"
-)
-
 target_include_directories(kernels PUBLIC include)
 
 # ---- Executables ----
 
-# add_executable(single_bench src/main/single_bench.cpp)
-# target_link_libraries(single_bench PRIVATE kernels)
-
-# add_executable(run_all src/main/run_all.cpp)
-# target_link_libraries(run_all PRIVATE kernels)
-
-# DEEPSEEK Suggestion for Windows
 add_executable(single_bench src/main/single_bench.cpp)
-target_link_libraries(single_bench kernels stdc++exp)
+target_link_libraries(single_bench PRIVATE kernels)
 
 add_executable(run_all src/main/run_all.cpp)
-target_link_libraries(run_all kernels stdc++exp)
+target_link_libraries(run_all PRIVATE kernels)

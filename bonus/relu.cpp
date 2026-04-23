@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <cstdint>
 #include <random>
+#include <bit>
+#include <thread>
 
 void initialize_relu(relu_args *args, const size_t size,
                      const std::uint_fast64_t seed) {
@@ -31,12 +33,62 @@ void naive_relu(std::span<float> data) {
 }
 
 void stu_relu(std::span<float> data) {
-    #if 1
-    for (float& val : data) {
-        val = std::max(0.0f, val);
+    // TODO: Implement your version, and call it in stu_relu_wrapper
+    // TODO: try MULTITHREADING ALSO, slower :( --> probably due to the intialization overhead
+    #if 0
+    size_t n = data.size();
+    unsigned int num_threads = std::thread::hardware_concurrency();
+    std::vector<std::thread> threads;
+
+    size_t chunk_size = n / num_threads;
+
+    for (unsigned int t = 0; t < num_threads; t++) {
+        size_t start = t * chunk_size;
+        size_t end = (t == num_threads - 1) ? n : start + chunk_size;
         
+        threads.emplace_back([&data, start, end]() {
+            for (size_t i = start; i < end; i++) {
+                // data[i] = std::max(0.0f, data[i]);
+                int32_t b = std::bit_cast<int32_t>(data[i]);
+                b &= ~(b >> 31);
+                data[i] = std::bit_cast<float>(b);
+            }
+        });
+    }
+
+    for (auto& t : threads) t.join();
+    #endif
+
+    #if 1
+    size_t n = data.size();
+    for (size_t i = 0; i < n; i++) {
+        // x & ~(x >> 31) = x
+        // 0b1110 < 0, for x < 0, 0b1110 >> 3 = 0b1111, negate it and becomes 0b0000
+        // x & ~(x >> 31) = 0
+        // val &= ~(val >> 31);
+
+        // get address where val is
+        // typecast as a pointer to int32_t
+        // dereference it --> get int32_t
+
+        /*
+        This one also okay with flags on
+        */
         // int32_t& bit_val = *(int32_t*)&val; 
         // bit_val &= ~(bit_val >> 31);
+
+        /*
+        No ptr arith?
+        */
+        // int32_t b = std::bit_cast<int32_t>(val);
+        // b &= ~(b >> 31);
+        // val = std::bit_cast<float>(b);
+
+        /*
+        Fastest for now! (below BASELINE)
+        TODO: OPTIMIZE MORE, SIMD maybe?
+        */
+        data[i] = std::max(0.0f, data[i]);
     }
     #endif
 }
