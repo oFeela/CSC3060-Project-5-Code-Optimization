@@ -137,12 +137,11 @@ void convert_data_struct(std::size_t width, std::size_t height,
 void stu_filter_gradient(float& out, const std::vector<pixel>& data,
                    std::size_t width, std::size_t height) {
 
-    #if 1 // TODO tell geo learn this please
+    #if 0 // multithread
     const std::size_t H = height;
     const std::size_t W = width;
     constexpr float inv9 = 1.0f / 9.0f;
 
-    // Get number of hardware threads
     unsigned int num_threads = std::thread::hardware_concurrency();
     if (num_threads == 0)
         num_threads = 4;
@@ -150,7 +149,6 @@ void stu_filter_gradient(float& out, const std::vector<pixel>& data,
     std::vector<double> partial_sums(num_threads, 0.0);
     std::vector<std::thread> threads;
 
-    // Divide rows among threads (each thread processes a range of y)
     std::size_t rows_per_thread = (H - 2) / num_threads;
 
     for (unsigned int t = 0; t < num_threads; ++t) {
@@ -245,7 +243,7 @@ void stu_filter_gradient(float& out, const std::vector<pixel>& data,
     out = total;
     #endif
 
-    #if 0
+    #if 1
     const std::size_t W = width;
     const std::size_t H = height;
     constexpr float inv9 = 1.0f / 9.0f;

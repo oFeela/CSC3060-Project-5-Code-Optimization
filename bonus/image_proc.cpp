@@ -74,7 +74,7 @@ float hdr_compress(float val) {
     return result / (1.0f + result);
 }
 
-// BUG can remove or no? __attribute__((noinline)) 
+__attribute__((noinline)) 
 float complex_mask_logic(float gray, float r, float g, float b, float thresh) {
     const float p0=0.11f, p1=0.22f, p2=0.33f, p3=0.44f, p4=0.55f;
     const float p5=0.66f, p6=0.77f, p7=0.88f, p8=0.99f, p9=1.01f;
@@ -96,7 +96,7 @@ float complex_mask_logic(float gray, float r, float g, float b, float thresh) {
     return std::clamp(final_val, 0.0f, 1.0f);
 }
 
-// BUG can remove or no? __attribute__((noinline)) 
+__attribute__((noinline)) 
 float importance_weight(float val) {
     static const float lut[] = {0.0f, 0.3f, 1.0f, 0.3f, 0.0f};
     float scaled = val * 4.0f;
@@ -162,6 +162,7 @@ void naive_image_proc(image_proc_args& args) {
 // -------------------------------------------------------------------------
 // TODO: Student Implementation
 // -------------------------------------------------------------------------
+//! inline Complex Mask and Importance Weighting
 void stu_image_proc(image_proc_args& args) {
     const size_t w = args.width;
     const size_t h = args.height;
@@ -171,6 +172,7 @@ void stu_image_proc(image_proc_args& args) {
     const float* __restrict__ b = args.b_channel.data();
     const float threshold = args.threshold;
 
+    #if 0 // multithreading
     unsigned int num_threads = std::thread::hardware_concurrency();
     if (num_threads == 0) num_threads = 4;
 
@@ -223,8 +225,9 @@ void stu_image_proc(image_proc_args& args) {
     for (auto& t : threads){
         t.join();
     }
+    #endif
 
-    #if 0
+    #if 1
     for (size_t y = 0; y < h; ++y)  {
         for (size_t x = 0; x < w; ++x){
             size_t i = y * w + x;
@@ -250,10 +253,32 @@ void stu_image_proc(image_proc_args& args) {
             float compress_val = result / (1.0f + result);
 
             // Stage 5: Masking
-            float mask = complex_mask_logic(compress_val, r_val, g_val, b_val, threshold);
+            const float p0 = 0.11f, p1 = 0.22f, p2 = 0.33f, p3 = 0.44f, p4 = 0.55f;
+            const float p5 = 0.66f, p6 = 0.77f, p7 = 0.88f, p8 = 0.99f, p9 = 1.01f;
+            
+            float mask = 0.0f;
+            if (compress_val > threshold) {
+                mask = (r_val * p0) + (g_val * p1) - (b_val * p2) + p9;
+                if (mask > 0.8f) mask *= p3;
+                else mask += p4;
+            } else {
+                mask = (r_val * p5) - (g_val * p6) + (b_val * p7) - p8;
+                if (mask < 0.2f) mask += p1;
+                else mask *= p2;
+            }
+            
+            float noise = std::sin(compress_val * p0) * std::cos(r_val * p1);
+            mask = (mask * 0.7f) + (noise * 0.3f);
+            mask = std::clamp(mask, 0.0f, 1.0f);
 
             // Stage 6: Importance Weighting
-            float weight = importance_weight(mask);
+            static const float lut[] = {0.0f, 0.3f, 1.0f, 0.3f, 0.0f};
+            float scaled = mask * 4.0f;
+            int idx = std::clamp(static_cast<int>(scaled), 0, 4);
+            float weight = scaled - static_cast<float>(idx);
+            
+            if (idx < 4) weight = lut[idx] * (1.0f - weight) + lut[idx + 1] * weight;
+            else weight = lut[4];
 
             // Output
             out[i] = std::clamp(compress_val * weight, 0.0f, 1.0f);
