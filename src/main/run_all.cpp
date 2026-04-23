@@ -24,11 +24,11 @@ int main() {
 
     std::uint32_t seed = 12345u;
 
-    // blackscholes_args black_args;
-    // initialize_blackscholes(black_args, 81920, seed);
-    // blackscholes_args black_args_stu = black_args;
-    // std::cout << "\tBlack-Scholes options: " << black_args.spot_price.size()
-    //           << '\n';
+    blackscholes_args black_args;
+    initialize_blackscholes(black_args, 81920, seed);
+    blackscholes_args black_args_stu = black_args;
+    std::cout << "\tBlack-Scholes options: " << black_args.spot_price.size()
+              << '\n';
 
     sparse_spmm_args sparse_args;
     initialize_spmm(sparse_args, 512, 512, -1, {}, seed);
