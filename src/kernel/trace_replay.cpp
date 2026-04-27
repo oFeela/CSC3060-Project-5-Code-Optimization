@@ -100,7 +100,7 @@ void stu_trace_replay(uint64_t& out,
     uint64_t total = 0;
     const uint64_t order_mix = 1315423911ull;
 
-    for (size_t i = 0; i < trace.size(); ++i) {
+    for (size_t i = 0; i < trace.size(); i++) {
         total = total * order_mix + cost[trace[i]];
     }
 

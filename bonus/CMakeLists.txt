@@ -45,6 +45,12 @@ set_source_files_properties(src/kernel/filter_gradient.cpp
 set_source_files_properties(src/kernel/image_proc.cpp 
     PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops -fprefetch-loop-arrays"
 )
+set_source_files_properties(src/kernel/sparse_spmm.cpp 
+    PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops"
+)
+set_source_files_properties(src/kernel/blackscholes.cpp 
+    PROPERTIES COMPILE_FLAGS "-O3 -march=native -funroll-loops -fprefetch-loop-arrays"
+)
 
 target_include_directories(kernels PUBLIC include)
 

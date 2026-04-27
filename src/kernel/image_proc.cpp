@@ -1,8 +1,8 @@
 #include "image_proc.h"
+
 #include <cmath>
 #include <algorithm>
 #include <random>
-#include <thread>
 
 void initialize_image_proc(image_proc_args *args, size_t w, size_t h, uint64_t seed) {
     args->width = w;
@@ -171,61 +171,6 @@ void stu_image_proc(image_proc_args& args) {
     const float* __restrict__ g = args.g_channel.data();
     const float* __restrict__ b = args.b_channel.data();
     const float threshold = args.threshold;
-
-    #if 0 // multithreading
-    unsigned int num_threads = std::thread::hardware_concurrency();
-    if (num_threads == 0) num_threads = 4;
-
-    size_t rows_per_thread = h / num_threads;
-
-    std::vector<std::thread> threads;
-    for (unsigned int t = 0; t < num_threads; t++){
-        size_t start_y = t * rows_per_thread;
-        size_t end_y = (t == num_threads-1) ? h : start_y + rows_per_thread;
-
-        threads.emplace_back([&, start_y, end_y]() {
-            for (size_t y = start_y; y < end_y; ++y){
-                for (size_t x = 0; x < w; ++x){
-
-                    size_t i = y * w + x;
-
-                    // Stage 1: Update RGB Value
-                    float r_val = (((r[i]* 1.05f) + 0.02f) > 1.0f) ? 1.0f : ((r[i]* 1.05f) + 0.02f);
-                    float b_val = (((b[i]* 1.05f) + 0.02f) > 1.0f) ? 1.0f : ((b[i]* 1.05f) + 0.02f);
-                    float g_val = (((g[i]* 1.05f) + 0.02f) > 1.0f) ? 1.0f : ((g[i]* 1.05f) + 0.02f);
-
-                    // Stage 2: Luminance Extraction
-                    float gray = (r_val * 0.299f) + (g_val * 0.587f) + (b_val * 0.114f);
-
-                    // Stage 3: Contrast Enhancement
-                    float adjusted = std::clamp((gray - 0.05f) / 0.90f, 0.0f, 1.0f);
-                    float grayEnhance = adjusted * adjusted * (3.0f - 2.0f * adjusted);
-
-                    // Stage 4: HDR Compression
-                    float g1 = (grayEnhance * 1.2f) * 0.5f;
-                    float g2 = g1 * g1 + 0.1f;
-                    float g3 = std::sqrt(g2);
-                    float gain = (g3 > 1.0f) ? (1.0f / g3) : (g3 * 0.95f);
-                    float result = grayEnhance * gain;
-                    float compress_val = result / (1.0f + result);
-
-                    // Stage 5: Masking
-                    float mask = complex_mask_logic(compress_val, r_val, g_val, b_val, threshold);
-
-                    // Stage 6: Importance Weighting
-                    float weight = importance_weight(mask);
-
-                    // Output
-                    out[i] = std::clamp(compress_val * weight, 0.0f, 1.0f);
-                }
-            }
-        });
-    }
-
-    for (auto& t : threads){
-        t.join();
-    }
-    #endif
 
     #if 1
     for (size_t y = 0; y < h; ++y)  {

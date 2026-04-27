@@ -1,9 +1,13 @@
 #include "blackscholes.h"
+
 #include <algorithm>
 #include <bit>
 #include <cstdint>
 #include <cstdio>
 #include <random>
+
+#include <thread>
+#include "helpers.h"
 
 #define ln10 2.30258509299
 #define inv_sqrt_2xPI 0.39894228040143270286
@@ -52,6 +56,32 @@ void CNDF(float &InputX, float &OutputX) {
         sign = 1;
     }
 
+    const float xNPrimeofX = std::exp(-0.5f * x * x) * inv_sqrt_2xPI;
+    const float k = 1.0f / (1.0f + p_val * x);
+    const float k_2 = k * k;
+    const float k_3 = k_2 * k;
+    const float k_4 = k_3 * k;
+    const float k_5 = k_4 * k;
+
+    float local = k * coefficient_a1;
+    local += k_2 * coefficient_a2;
+    local += k_3 * coefficient_a3;
+    local += k_4 * coefficient_a4;
+    local += k_5 * coefficient_a5;
+    local = 1.0f - local * xNPrimeofX;
+
+    OutputX = sign ? (1.0f - local) : local;
+}
+
+void CNDF_stu(float &InputX, float &OutputX) {
+    int sign = 0;
+    float x = InputX;
+
+    if (x < 0.0f) {
+        x = -x;
+        sign = 1;
+    }
+
     const float exp_val = -0.5f * x * x;
     const float exp_taylor = 1 + exp_val + (exp_val * exp_val) / 2;
     const float xNPrimeofX = exp_taylor * inv_sqrt_2xPI;
@@ -77,8 +107,36 @@ void CNDF(float &InputX, float &OutputX) {
     OutputX = sign ? (1.0f - local) : local;
 }
 
-// BUG i modified this function, it's okay?
 static inline void naive_BlkSchls_one(float &CallOptionPrice,
+                                      float &PutOptionPrice, float spotPrice,
+                                      float strike, float rate,
+                                      float volatility, float time) {
+    const float xSqrtTime = std::sqrt(time);
+    const float xLogTerm = std::log(spotPrice / strike);
+    const float xPowerTerm = 0.5f * volatility * volatility;
+
+    float xD1 = (rate + xPowerTerm) * time + xLogTerm;
+    const float xDen = volatility * xSqrtTime;
+    xD1 = xD1 / xDen;
+    const float xD2 = xD1 - xDen;
+
+    float d1 = xD1;
+    float d2 = xD2;
+    float NofXd1 = 0.0f;
+    float NofXd2 = 0.0f;
+
+    CNDF(d1, NofXd1);
+    CNDF(d2, NofXd2);
+
+    const float FutureValueX = strike * std::exp(-(rate) * (time));
+    CallOptionPrice = (spotPrice * NofXd1) - (FutureValueX * NofXd2);
+
+    const float NegNofXd1 = 1.0f - NofXd1;
+    const float NegNofXd2 = 1.0f - NofXd2;
+    PutOptionPrice = (FutureValueX * NegNofXd2) - (spotPrice * NegNofXd1);
+}
+
+static inline void stu_BlkSchls_one(float &CallOptionPrice,
                                       float &PutOptionPrice, float spotPrice,
                                       float strike, float rate,
                                       float volatility, float time) {
@@ -98,8 +156,8 @@ static inline void naive_BlkSchls_one(float &CallOptionPrice,
     float NofXd1 = 0.0f;
     float NofXd2 = 0.0f;
 
-    CNDF(d1, NofXd1);
-    CNDF(d2, NofXd2);
+    CNDF_stu(d1, NofXd1);
+    CNDF_stu(d2, NofXd2);
 
     const float exp_val = -(rate) * (time);
     const float exp_taylor = 1 + exp_val + (exp_val * exp_val) / 2;
@@ -131,7 +189,6 @@ void naive_BlkSchls(std::vector<float> &CallOptionPrice,
     }
 }
 
-// TODO can precompute tables for exp, sqrt? and use asymptotic limits for CNDF
 void stu_BlkSchls(std::vector<float> &CallOptionPrice,
                   std::vector<float> &PutOptionPrice,
                   const std::vector<float> &spotPrice,
@@ -139,20 +196,17 @@ void stu_BlkSchls(std::vector<float> &CallOptionPrice,
                   const std::vector<float> &rate,
                   const std::vector<float> &volatility,
                   const std::vector<float> &time) {
-    // TODO:
-    // Implement your version for BlkSchls here, then 
-    // call it at stu_BlkSchls_wrapper()...
 
-    #if 1 // TODO same as naive still cause I modified the other functions
+    #if 1
     size_t n = spotPrice.size();
     for (size_t i = 0; i < n; ++i) {
-        naive_BlkSchls_one(CallOptionPrice[i],
-                           PutOptionPrice[i],
-                           spotPrice[i],
-                           strike[i],
-                           rate[i],
-                           volatility[i],
-                           time[i]);
+        stu_BlkSchls_one(CallOptionPrice[i],
+                        PutOptionPrice[i],
+                        spotPrice[i],
+                        strike[i],
+                        rate[i],
+                        volatility[i],
+                        time[i]);
     }
     #endif
 }

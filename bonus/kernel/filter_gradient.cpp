@@ -1,10 +1,13 @@
 #include "filter_gradient.h"
-#include <thread>
+
 #include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <random>
+
+#include <thread>
+#include "helpers.h"
 
 void initialize_filter_gradient(filter_gradient_args* args,
                         std::size_t width,
@@ -136,13 +139,102 @@ void convert_data_struct(std::size_t width, std::size_t height,
 
 void stu_filter_gradient(float& out, const std::vector<pixel>& data,
                    std::size_t width, std::size_t height) {
-
-    #if 1 // TODO tell geo learn this please
+    
+    // modified to use the thread wrapper helper
+    #if 1
     const std::size_t H = height;
     const std::size_t W = width;
     constexpr float inv9 = 1.0f / 9.0f;
 
-    // Get number of hardware threads
+    std::vector<double> partial_sums; partial_sums.reserve(std::thread::hardware_concurrency());
+
+    parallel_for(1, H - 1, [&](std::size_t st_y, std::size_t en_y) {
+        double local_sum = 0.0;
+
+        for (std::size_t y = st_y; y < en_y; ++y) {
+            for (std::size_t x = 1; x + 1 < W; ++x) {
+                double sum_a = 0.0, sum_b = 0.0, sum_c = 0.0;
+                for (int dy = -1; dy <= 1; ++dy) {
+                    const std::size_t row = (y + dy) * W;
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        const std::size_t idx = row + (x + dx);
+                        sum_a += data[idx].a;
+                        sum_b += data[idx].b;
+                        sum_c += data[idx].c;
+                    }
+                }
+                const float avg_a = sum_a * inv9;
+                const float avg_b = sum_b * inv9;
+                const float avg_c = sum_c * inv9;
+                const float p1 = avg_a * avg_b + avg_c;
+
+                const std::size_t ym1 = (y - 1) * W;
+                const std::size_t y0 = y * W;
+                const std::size_t yp1 = (y + 1) * W;
+
+                const std::size_t xm1 = x - 1;
+                const std::size_t x0 = x;
+                const std::size_t xp1 = x + 1;
+
+                const pixel &p_ym1_xm1 = data[ym1 + xm1];
+                const pixel &p_ym1_x0 = data[ym1 + x0];
+                const pixel &p_ym1_xp1 = data[ym1 + xp1];
+                const pixel &p_y0_xm1 = data[y0 + xm1];
+                const pixel &p_y0_xp1 = data[y0 + xp1];
+                const pixel &p_yp1_xm1 = data[yp1 + xm1];
+                const pixel &p_yp1_x0 = data[yp1 + x0];
+                const pixel &p_yp1_xp1 = data[yp1 + xp1];
+
+                const float sobel_dx =
+                    -p_ym1_xm1.d + p_ym1_xp1.d - 2.0f * p_y0_xm1.d +
+                    2.0f * p_y0_xp1.d - p_yp1_xm1.d + p_yp1_xp1.d;
+
+                const float sobel_ex =
+                    -p_ym1_xm1.e + p_ym1_xp1.e - 2.0f * p_y0_xm1.e +
+                    2.0f * p_y0_xp1.e - p_yp1_xm1.e + p_yp1_xp1.e;
+
+                const float sobel_fx =
+                    -p_ym1_xm1.f + p_ym1_xp1.f - 2.0f * p_y0_xm1.f +
+                    2.0f * p_y0_xp1.f - p_yp1_xm1.f + p_yp1_xp1.f;
+
+                const float p2 = sobel_dx * sobel_ex + sobel_fx;
+
+                const float sobel_gy = -p_ym1_xm1.g - 2.0f * p_ym1_x0.g -
+                                        p_ym1_xp1.g + p_yp1_xm1.g +
+                                        2.0f * p_yp1_x0.g + p_yp1_xp1.g;
+
+                const float sobel_hy = -p_ym1_xm1.h - 2.0f * p_ym1_x0.h -
+                                        p_ym1_xp1.h + p_yp1_xm1.h +
+                                        2.0f * p_yp1_x0.h + p_yp1_xp1.h;
+
+                const float sobel_iy = -p_ym1_xm1.i - 2.0f * p_ym1_x0.i -
+                                        p_ym1_xp1.i + p_yp1_xm1.i +
+                                        2.0f * p_yp1_x0.i + p_yp1_xp1.i;
+
+                const float p3 = sobel_gy * sobel_hy + sobel_iy;
+
+                local_sum += p1 + p2 + p3;
+            }
+        }
+
+        partial_sums.emplace_back(local_sum);
+    });
+
+    // Combine results
+    double total = 0.0;
+    for (auto& sum : partial_sums) {
+        total += sum;
+    }
+
+    out = total;
+    #endif
+
+    // multithread, original, written by Geo
+    #if 0
+    const std::size_t H = height;
+    const std::size_t W = width;
+    constexpr float inv9 = 1.0f / 9.0f;
+
     unsigned int num_threads = std::thread::hardware_concurrency();
     if (num_threads == 0)
         num_threads = 4;
@@ -150,7 +242,6 @@ void stu_filter_gradient(float& out, const std::vector<pixel>& data,
     std::vector<double> partial_sums(num_threads, 0.0);
     std::vector<std::thread> threads;
 
-    // Divide rows among threads (each thread processes a range of y)
     std::size_t rows_per_thread = (H - 2) / num_threads;
 
     for (unsigned int t = 0; t < num_threads; ++t) {
@@ -240,89 +331,6 @@ void stu_filter_gradient(float& out, const std::vector<pixel>& data,
     double total = 0.0;
     for (auto sum : partial_sums) {
         total += sum;
-    }
-
-    out = total;
-    #endif
-
-    #if 0
-    const std::size_t W = width;
-    const std::size_t H = height;
-    constexpr float inv9 = 1.0f / 9.0f;
-
-    double total = 0.0f;
-
-    for (std::size_t y = 1; y + 1 < H; ++y) {
-        for (std::size_t x = 1; x + 1 < W; ++x) {
-
-            double sum_a = 0.0, sum_b = 0.0, sum_c = 0.0;
-            for (int dy = -1; dy <= 1; ++dy) {
-                const std::size_t row = (y + dy) * W;
-                for (int dx = -1; dx <= 1; ++dx) {
-                    const std::size_t idx = row + (x + dx);
-                    sum_a += data[idx].a;
-                    sum_b += data[idx].b;
-                    sum_c += data[idx].c;
-                }
-            }
-            const float avg_a = sum_a * inv9;
-            const float avg_b = sum_b * inv9;
-            const float avg_c = sum_c * inv9;
-            const float p1 = avg_a * avg_b + avg_c;
-
-            const std::size_t ym1 = (y - 1) * W;
-            const std::size_t y0 = y * W;
-            const std::size_t yp1 = (y + 1) * W;
-
-            const std::size_t xm1 = x - 1;
-            const std::size_t x0 = x;
-            const std::size_t xp1 = x + 1;
-
-            const pixel& p_ym1_xm1 = data[ym1 + xm1];
-            const pixel& p_ym1_x0 = data[ym1 + x0];
-            const pixel& p_ym1_xp1 = data[ym1 + xp1];
-            const pixel& p_y0_xm1 = data[y0 + xm1];
-            const pixel& p_y0_xp1 = data[y0 + xp1];
-            const pixel& p_yp1_xm1 = data[yp1 + xm1];
-            const pixel& p_yp1_x0 = data[yp1 + x0];
-            const pixel& p_yp1_xp1 = data[yp1 + xp1];
-
-            const float sobel_dx = -p_ym1_xm1.d + p_ym1_xp1.d -
-                                   2.0f * p_y0_xm1.d +
-                                   2.0f * p_y0_xp1.d - p_yp1_xm1.d +
-                                   p_yp1_xp1.d;
-
-            const float sobel_ex = -p_ym1_xm1.e + p_ym1_xp1.e -
-                                   2.0f * p_y0_xm1.e +
-                                   2.0f * p_y0_xp1.e - p_yp1_xm1.e +
-                                   p_yp1_xp1.e;
-
-            const float sobel_fx = -p_ym1_xm1.f + p_ym1_xp1.f -
-                                   2.0f * p_y0_xm1.f +
-                                   2.0f * p_y0_xp1.f - p_yp1_xm1.f +
-                                   p_yp1_xp1.f;
-
-            const float p2 = sobel_dx * sobel_ex + sobel_fx;
-
-            const float sobel_gy = -p_ym1_xm1.g -
-                                   2.0f * p_ym1_x0.g - p_ym1_xp1.g +
-                                   p_yp1_xm1.g + 2.0f * p_yp1_x0.g +
-                                   p_yp1_xp1.g;
-
-            const float sobel_hy = -p_ym1_xm1.h -
-                                   2.0f * p_ym1_x0.h - p_ym1_xp1.h +
-                                   p_yp1_xm1.h + 2.0f * p_yp1_x0.h +
-                                   p_yp1_xp1.h;
-
-            const float sobel_iy = -p_ym1_xm1.i -
-                                   2.0f * p_ym1_x0.i - p_ym1_xp1.i +
-                                   p_yp1_xm1.i + 2.0f * p_yp1_x0.i +
-                                   p_yp1_xp1.i;
-
-            const float p3 = sobel_gy * sobel_hy + sobel_iy;
-
-            total += p1 + p2 + p3;
-        }
     }
 
     out = total;

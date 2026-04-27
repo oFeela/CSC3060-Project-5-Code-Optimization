@@ -3,6 +3,9 @@
 #include <cmath>
 #include <random>
 
+#include <thread>
+#include "helpers.h"
+
 void initialize_grff(grff_args *args, const size_t size, const std::uint_fast64_t seed) {
     if (!args) return;
 
@@ -78,6 +81,10 @@ void naive_grff(grff_args& args) {
 // TODO: Student Implementation
 // -------------------------------------------------------------------------
 void stu_grff(grff_args& args) {
+    // 1 VECTOR
+    // FASTERST ON SERVER
+    // possibly because the server's cpu can't do floating point arith fast enough
+    // so storing the result in vector A is better
     #if 1
     size_t n = args.a_features.size();
     std::vector<float> A(n);
@@ -107,20 +114,23 @@ void stu_grff(grff_args& args) {
     float res = C - E;
     args.f_output[0] = std::max(res, 0.0f);
 
-    for (size_t i = 1; i < n; i++) {
-        float p = args.a_features[i] * args.b_features[i];
-        float G = 0.5f * 
-        ((p) / 
-        (1.0f + std::abs(p)) + 1.0f);
+    // just multithread it lol
+    parallel_for(1, n, [&](size_t st, size_t en) {
+        for (size_t i = st; i < en; i++) {
+            float p = args.a_features[i] * args.b_features[i];
+            float G = 0.5f * 
+            ((p) / 
+            (1.0f + std::abs(p)) + 1.0f);
 
-        float SA = (A[i] + A[i - 1]) * 0.5f;
-        float B = args.b_features[i] * (1.0f - G) * avg_a;
-        float C = args.c_features[i] + (SA / (1.0f + std::abs(SA)));
-        float H = SA * C;
-        float E = (H + B) / (1.0f + std::abs(SA));
-        float res = C - E;
-        args.f_output[i] = std::max(res, 0.0f);
-    }
+            float SA = (A[i] + A[i - 1]) * 0.5f;
+            float B = args.b_features[i] * (1.0f - G) * avg_a;
+            float C = args.c_features[i] + (SA / (1.0f + std::abs(SA)));
+            float H = SA * C;
+            float E = (H + B) / (1.0f + std::abs(SA));
+            float res = C - E;
+            args.f_output[i] = std::max(res, 0.0f);
+        }
+    });
     #endif
 }
 

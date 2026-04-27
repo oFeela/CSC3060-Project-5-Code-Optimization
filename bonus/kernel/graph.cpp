@@ -7,6 +7,8 @@
 #include <vector>
 #include <iostream>
 
+#include <immintrin.h>
+
 void initialize_graph(graph_args* args,
                        std::size_t node_count,
                        int avg_degree,
@@ -93,13 +95,15 @@ void naive_graph(std::uint64_t& out, const Graph& graph) {
 }
 
 void stu_graph(std::uint64_t& out, const OptimizedGraph& graph) {
+    // just from normal implementation
+    #if 0
     std::uint64_t checksum = 0;
     const std::vector<int>& offsets = graph.offsets;
     const std::vector<int>& edge_dests = graph.edge_dests;
     for (int u = 0; u < graph.n; u++) {
         int j = offsets[u];
         int r = offsets[u + 1];
-        __builtin_prefetch(&edge_dests[r], 0, 1);
+
         for (; j + 7 < r; j += 8) {
             checksum += edge_dests[j];
             checksum += edge_dests[j + 1];
@@ -115,6 +119,49 @@ void stu_graph(std::uint64_t& out, const OptimizedGraph& graph) {
         }
     }
     out = checksum;
+    #endif
+
+    // explicit simd because the server doesnt auto vectorize for some whatever reason
+    #if 1
+    std::uint64_t checksum = 0;
+    const std::vector<int>& offsets = graph.offsets;
+    const std::vector<int>& edge_dests = graph.edge_dests;
+    for (int u = 0; u < graph.n; u++) {
+        int j = offsets[u];
+        int r = offsets[u + 1];
+
+        __m256i psum = _mm256_setzero_si256(); // 256/32 = 8 int or 4 longlong
+
+        for (; j + 7 < r; j += 8) {
+            // 8 int
+            __m256i vals = _mm256_loadu_si256((__m256i*)&graph.edge_dests[j]);
+
+            // split into 2 128 bits
+            // each half has 4 int --> convert it to 4 long long
+            __m256i lo = _mm256_cvtepi32_epi64(_mm256_castsi256_si128(vals));
+            __m256i hi = _mm256_cvtepi32_epi64(_mm256_extracti128_si256(vals, 1));
+
+            // psum = lo + hi --> psum now contains the partial sums
+            // |psum1|psum2|psum3|psum4|, with psum1 = val1 + val5, psum2 = val2 + val6, ..., psum4 = val4 + val8
+            psum = _mm256_add_epi64(psum, lo);
+            psum = _mm256_add_epi64(psum, hi);
+        }
+
+        // convert sum (partial sums) into the actual sum
+        // |sum1 + sum3|sum2 + sum4|
+        __m128i psum128 = _mm_add_epi64(_mm256_castsi256_si128(psum), _mm256_extracti128_si256(psum, 1));
+        
+        // |sum1 + sum2 + sum3 + sum4| is the wanted
+        uint64_t sum = _mm_extract_epi64(psum128, 0) + _mm_extract_epi64(psum128, 1);
+        checksum += sum;
+
+        // leftovers
+        for (; j < r; j++) {
+            checksum += edge_dests[j];
+        }
+    }
+    out = checksum;
+    #endif
 }
 
 void naive_graph_wrapper(void* ctx) {

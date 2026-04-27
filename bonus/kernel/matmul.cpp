@@ -6,6 +6,9 @@
 #include <stdexcept>
 #include <vector>
 
+#include <thread>
+#include "helpers.h"
+
 void initialize_matmul(matmul_args& args, int n, uint32_t seed) {
     if (n <= 0) {
         throw std::invalid_argument("initialize_matmul: n must be positive.");
@@ -49,33 +52,11 @@ void stu_matmul(std::vector<float>& C,
                 const std::vector<float>& A,
                 const std::vector<float>& B,
                 int n) {
+    
+    // originally i did this
+    // works even with -O3 for sm reason
+    // 12.85 speedup
     #if 1
-    std::fill(C.begin(), C.end(), 0.0f);
-
-    for (int r = 0; r < n; r++) {
-        for (int k = 0; k < n; k++) {
-            float v = A[r * n + k];
-            int c = 0;
-            for (; c + 7 < n; c += 8) {
-                C[r * n + c] += v * B[k * n + c + 0];
-                C[r * n + c + 1] += v * B[k * n + c + 1];
-                C[r * n + c + 2] += v * B[k * n + c + 2];
-                C[r * n + c + 3] += v * B[k * n + c + 3];
-                C[r * n + c + 4] += v * B[k * n + c + 4];
-                C[r * n + c + 5] += v * B[k * n + c + 5];
-                C[r * n + c + 6] += v * B[k * n + c + 6];
-                C[r * n + c + 7] += v * B[k * n + c + 7];
-            }
-            // not rlly needed if the given matrix size is 512x512 (multiple of 8)
-            for (; c < n; c++) {
-                C[r * n + c] += v * B[k * n + c];
-            }
-        }
-    }
-    #endif
-     
-    // precision loss
-    #if 0
     std::vector<float> BT(n * n);
     for (int r = 0; r < n; r++) {
         for (int c = 0; c < n; c++) {
@@ -83,22 +64,46 @@ void stu_matmul(std::vector<float>& C,
         }
     }
 
-    for (int r = 0; r < n; r++) {
-        for (int c = 0; c < n; c++) {
-            float sum = 0.0f;
-            for (int k = 0; k + 7 < n; k += 8) {
-                sum += A[r * n + k] * BT[c * n + k];
-                sum += A[r * n + k + 1] * BT[c * n + k + 1];
-                sum += A[r * n + k + 2] * BT[c * n + k + 2];
-                sum += A[r * n + k + 3] * BT[c * n + k + 3];
-                sum += A[r * n + k + 4] * BT[c * n + k + 4];
-                sum += A[r * n + k + 5] * BT[c * n + k + 5];
-                sum += A[r * n + k + 6] * BT[c * n + k + 6];
-                sum += A[r * n + k + 7] * BT[c * n + k + 7];
+    parallel_for(0, n, [&](int start_row, int end_row) {
+        for (int r = start_row; r < end_row; r++) {
+            for (int c = 0; c < n; c++) {
+                float sum = 0.0f;
+                for (int k = 0; k < n; k++) {
+                    sum += A[r * n + k] * BT[c * n + k];
+                }
+                C[r * n + c] = sum;
             }
-            C[r * n + c] = sum;
         }
-    }
+    });
+    #endif
+
+    // On server with -O3, this fails because precision loss
+    // Without -O3, it works, but speedup is 7-8
+    #if 0
+    std::fill(C.begin(), C.end(), 0.0f);
+
+    parallel_for(0, n, [&](int sr, int er) {
+        for (int r = sr; r < er; r++) {
+            for (int k = 0; k < n; k++) {
+                float v = A[r * n + k];
+                int c = 0;
+                for (; c + 7 < n; c += 8) {
+                    C[r * n + c] += v * B[k * n + c + 0];
+                    C[r * n + c + 1] += v * B[k * n + c + 1];
+                    C[r * n + c + 2] += v * B[k * n + c + 2];
+                    C[r * n + c + 3] += v * B[k * n + c + 3];
+                    C[r * n + c + 4] += v * B[k * n + c + 4];
+                    C[r * n + c + 5] += v * B[k * n + c + 5];
+                    C[r * n + c + 6] += v * B[k * n + c + 6];
+                    C[r * n + c + 7] += v * B[k * n + c + 7];
+                }
+                // not rlly needed if the given matrix size is 512x512 (multiple of 8)
+                for (; c < n; c++) {
+                    C[r * n + c] += v * B[k * n + c];
+                }
+            }
+        }
+    });
     #endif
 }
 

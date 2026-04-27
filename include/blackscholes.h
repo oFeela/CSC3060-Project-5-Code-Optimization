@@ -27,6 +27,9 @@ void initialize_blackscholes(blackscholes_args &args,
 /* Cumulative Normal Distribution Function */
 void CNDF(float &InputX, float &OutputX);
 
+/* CNDF student version */
+void CNDF_stu(float &InputX, float &OutputX);
+
 void naive_BlkSchls(std::vector<float> &CallOptionPrice,
                     std::vector<float> &PutOptionPrice,
                     const std::vector<float> &spotPrice,
