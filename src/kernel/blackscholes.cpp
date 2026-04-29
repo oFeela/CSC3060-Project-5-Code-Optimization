@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <random>
 
+#define inv_sqrt2 0.70710678118
 #define ln10 2.30258509299
 #define inv_sqrt_2xPI 0.39894228040143270286
 #define p_val 0.2316419
@@ -71,6 +72,39 @@ void CNDF(float &InputX, float &OutputX) {
 }
 
 void CNDF_stu(float &InputX, float &OutputX) {
+    #if 1 // fastest
+    OutputX = 0.5f * (1 + std::erf(InputX * inv_sqrt2));
+    #endif
+
+    // Naive one
+    #if 0
+    int sign = 0;
+    float x = InputX;
+
+    if (x < 0.0f) {
+        x = -x;
+        sign = 1;
+    }
+
+    const float xNPrimeofX = std::exp(-0.5f * x * x) * inv_sqrt_2xPI;
+    const float k = 1.0f / (1.0f + p_val * x);
+    const float k_2 = k * k;
+    const float k_3 = k_2 * k;
+    const float k_4 = k_3 * k;
+    const float k_5 = k_4 * k;
+
+    float local = k * coefficient_a1;
+    local += k_2 * coefficient_a2;
+    local += k_3 * coefficient_a3;
+    local += k_4 * coefficient_a4;
+    local += k_5 * coefficient_a5;
+    local = 1.0f - local * xNPrimeofX;
+
+    OutputX = sign ? (1.0f - local) : local;
+    #endif
+
+    // Not accurate
+    #if 0
     int sign = 0;
     float x = InputX;
 
@@ -102,6 +136,7 @@ void CNDF_stu(float &InputX, float &OutputX) {
     local = 1.0f - local * xNPrimeofX;
 
     OutputX = sign ? (1.0f - local) : local;
+    #endif
 }
 
 static inline void naive_BlkSchls_one(float &CallOptionPrice,
@@ -133,14 +168,34 @@ static inline void naive_BlkSchls_one(float &CallOptionPrice,
     PutOptionPrice = (FutureValueX * NegNofXd2) - (spotPrice * NegNofXd1);
 }
 
+// static inline float exp_approx(float x) {
+//     // ---- Range reduction using base 2 ----
+//     const float one_over_ln2 = 1.44269504f; // 1 / ln(2)
+//     const float ln2 = 0.69314718f;          // ln(2)
+
+//     // Split x into: x = k * ln(2) + f
+//     float k_float = std::round(x * one_over_ln2); // k = integer
+//     int k = static_cast<int>(k_float);
+//     float f = x - k_float * ln2; // f is tiny! in [-0.35, 0.35]
+
+//     // ---- Standard Taylor series for e^f, 4 terms ----
+//     // No minimax, no Horner, just the formula you know
+//     float f2 = f * f;
+//     float f3 = f2 * f;
+//     float f4 = f3 * f;
+
+//     float ef = 1.0f + f + 0.5f * f2 + (1.0f / 6.0f) * f3 + (1.0f / 24.0f) * f4;
+
+//     // ---- Reconstruct: e^x = 2^k * e^f ----
+//     return std::ldexp(ef, k); // multiply ef by 2^k
+// }
+
 static inline void stu_BlkSchls_one(float &CallOptionPrice,
                                       float &PutOptionPrice, float spotPrice,
                                       float strike, float rate,
                                       float volatility, float time) {
     const float xSqrtTime = std::sqrt(time);
-    const float log_val = (spotPrice / strike) - 1;
-    const float xLogTerm = 1/ln10 * ((log_val)-(log_val * log_val)/2);
-    // const float xLogTerm = std::log(spotPrice / strike);
+    const float xLogTerm = std::log(spotPrice / strike);
     const float xPowerTerm = 0.5f * volatility * volatility;
 
     float xD1 = (rate + xPowerTerm) * time + xLogTerm;
@@ -156,10 +211,7 @@ static inline void stu_BlkSchls_one(float &CallOptionPrice,
     CNDF_stu(d1, NofXd1);
     CNDF_stu(d2, NofXd2);
 
-    const float exp_val = -(rate) * (time);
-    const float exp_taylor = 1 + exp_val + (exp_val * exp_val) / 2;
-    const float FutureValueX = strike * exp_taylor;
-    // const float FutureValueX = strike * std::exp(-(rate) * (time));
+    const float FutureValueX = strike * std::exp(-(rate) * (time));
     CallOptionPrice = (spotPrice * NofXd1) - (FutureValueX * NofXd2);
 
     const float NegNofXd1 = 1.0f - NofXd1;

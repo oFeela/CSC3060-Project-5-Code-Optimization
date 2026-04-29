@@ -7,6 +7,7 @@
 #include <random>
 
 #include <thread>
+#include <atomic>
 #include "helpers.h"
 
 void initialize_filter_gradient(filter_gradient_args* args,
@@ -146,7 +147,7 @@ void stu_filter_gradient(float& out, const std::vector<pixel>& data,
     const std::size_t W = width;
     constexpr float inv9 = 1.0f / 9.0f;
 
-    std::vector<double> partial_sums; partial_sums.reserve(std::thread::hardware_concurrency());
+    std::atomic<double> total(0.0);
 
     parallel_for(1, H - 1, [&](std::size_t st_y, std::size_t en_y) {
         double local_sum = 0.0;
@@ -217,14 +218,8 @@ void stu_filter_gradient(float& out, const std::vector<pixel>& data,
             }
         }
 
-        partial_sums.emplace_back(local_sum);
+        total += local_sum;
     });
-
-    // Combine results
-    double total = 0.0;
-    for (auto& sum : partial_sums) {
-        total += sum;
-    }
 
     out = total;
     #endif
