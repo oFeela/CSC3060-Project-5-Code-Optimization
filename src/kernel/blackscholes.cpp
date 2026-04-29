@@ -6,9 +6,6 @@
 #include <cstdio>
 #include <random>
 
-#include <thread>
-#include "helpers.h"
-
 #define ln10 2.30258509299
 #define inv_sqrt_2xPI 0.39894228040143270286
 #define p_val 0.2316419

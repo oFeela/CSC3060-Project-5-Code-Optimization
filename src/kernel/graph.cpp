@@ -48,9 +48,6 @@ void initialize_graph(graph_args* args,
     }
 
     args->out = 0;
-
-    // construc tthe optimized graph, assuming we HAVE no info about the avg_degree --> so it can generalize to ANY directed graph
-    initialize_optimized_graph(args);
 }
 
 void initialize_optimized_graph(graph_args* args) {

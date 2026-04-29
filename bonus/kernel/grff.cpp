@@ -1,4 +1,5 @@
 #include "grff.h"
+
 #include <algorithm>
 #include <cmath>
 #include <random>

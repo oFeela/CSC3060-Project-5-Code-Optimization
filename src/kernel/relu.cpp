@@ -1,4 +1,5 @@
 #include "relu.h"
+
 #include <algorithm>
 #include <cstdint>
 #include <random>

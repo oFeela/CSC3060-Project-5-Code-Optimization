@@ -65,6 +65,8 @@ int main() {
     graph_args graph_args_naive;
     initialize_graph(&graph_args_naive, graph_node_count, graph_avg_degree, seed);
     graph_args graph_args_stu = graph_args_naive;
+    // construc tthe optimized graph, assuming we HAVE no info about the avg_degree --> so it can generalize to ANY directed graph
+    initialize_optimized_graph(&graph_args_stu);
     std::cout << "\tGraph: node_count=" << graph_node_count
               << ", avg_degree=" << graph_avg_degree << '\n';
 
