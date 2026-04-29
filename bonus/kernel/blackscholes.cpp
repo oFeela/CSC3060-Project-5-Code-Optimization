@@ -1,22 +1,20 @@
 #include "blackscholes.h"
-
+#include <thread>
 #include <algorithm>
 #include <bit>
 #include <cstdint>
 #include <cstdio>
 #include <random>
 
-#include <thread>
-#include "helpers.h"
-
-#define ln10 2.30258509299
-#define inv_sqrt_2xPI 0.39894228040143270286
-#define p_val 0.2316419
-#define coefficient_a1 0.319381530
-#define coefficient_a2 -0.356563782
-#define coefficient_a3 1.781477937
-#define coefficient_a4 -1.821255978
-#define coefficient_a5 1.330274429
+#define inv_sqrt2 0.70710678118f
+#define ln10 2.30258509299f
+#define inv_sqrt_2xPI 0.39894228040143270286f
+#define p_val 0.2316419f
+#define coefficient_a1 0.319381530f
+#define coefficient_a2 -0.356563782f
+#define coefficient_a3 1.781477937f
+#define coefficient_a4 -1.821255978f
+#define coefficient_a5 1.330274429f
 
 void initialize_blackscholes(blackscholes_args &args,
                              std::size_t n,
@@ -73,38 +71,31 @@ void CNDF(float &InputX, float &OutputX) {
     OutputX = sign ? (1.0f - local) : local;
 }
 
-void CNDF_stu(float &InputX, float &OutputX) {
-    int sign = 0;
+static inline float fast_exp_small(float x) { // near zero values
+    return 1.0f +
+           x * (1.0f +
+                x * (0.5f + x * ((1.0f / 6.0f) +
+                                 x * ((1.0f / 24.0f) + x * (1.0f / 120.0f)))));
+}
+
+static inline float CNDF_stu_fast(float InputX) {
     float x = InputX;
+    const bool negative = x < 0.0f;
 
-    if (x < 0.0f) {
-        x = -x;
-        sign = 1;
-    }
+    x = std::abs(x); // I believe in speed of STL
 
-    const float exp_val = -0.5f * x * x;
-    const float exp_taylor = 1 + exp_val + (exp_val * exp_val) / 2;
-    const float xNPrimeofX = exp_taylor * inv_sqrt_2xPI;
-    // const float xNPrimeofX = std::exp(-0.5f * x * x) * inv_sqrt_2xPI;
+    const float xNPrimeofX = std::exp(-0.5f * x * x) * inv_sqrt_2xPI;
     const float k = 1.0f / (1.0f + p_val * x);
-    const float k_2 = k * k;
-    const float k_3 = k_2 * k;
-    const float k_4 = k_3 * k;
-    const float k_5 = k_4 * k;
 
-    float local = k * coefficient_a1
-        + k_2 * coefficient_a2
-        + k_3 * coefficient_a3
-        + k_4 * coefficient_a4
-        + k_5 * coefficient_a5;
-    // float local = k * coefficient_a1;
-    // local += k_2 * coefficient_a2;
-    // local += k_3 * coefficient_a3;
-    // local += k_4 * coefficient_a4;
-    // local += k_5 * coefficient_a5;
-    local = 1.0f - local * xNPrimeofX;
+    float local = coefficient_a5;
+    local = local * k + coefficient_a4;
+    local = local * k + coefficient_a3;
+    local = local * k + coefficient_a2;
+    local = local * k + coefficient_a1;
+    local = local * k;
 
-    OutputX = sign ? (1.0f - local) : local;
+    const float output = 1.0f - xNPrimeofX * local;
+    return negative ? (1.0f - output) : output;
 }
 
 static inline void naive_BlkSchls_one(float &CallOptionPrice,
@@ -115,8 +106,8 @@ static inline void naive_BlkSchls_one(float &CallOptionPrice,
     const float xLogTerm = std::log(spotPrice / strike);
     const float xPowerTerm = 0.5f * volatility * volatility;
 
-    float xD1 = (rate + xPowerTerm) * time + xLogTerm;
     const float xDen = volatility * xSqrtTime;
+    float xD1 = (rate + xPowerTerm) * time + xLogTerm;
     xD1 = xD1 / xDen;
     const float xD2 = xD1 - xDen;
 
@@ -136,38 +127,39 @@ static inline void naive_BlkSchls_one(float &CallOptionPrice,
     PutOptionPrice = (FutureValueX * NegNofXd2) - (spotPrice * NegNofXd1);
 }
 
-static inline void stu_BlkSchls_one(float &CallOptionPrice,
-                                      float &PutOptionPrice, float spotPrice,
-                                      float strike, float rate,
-                                      float volatility, float time) {
+static inline void stu_BlkSchls_one_fast(float &CallOptionPrice,
+                                         float &PutOptionPrice,
+                                         float spotPrice,
+                                         float strike,
+                                         float rate,
+                                         float volatility,
+                                         float time) {
     const float xSqrtTime = std::sqrt(time);
-    const float log_val = (spotPrice / strike) - 1;
-    const float xLogTerm = 1/ln10 * ((log_val)-(log_val * log_val)/2);
-    // const float xLogTerm = std::log(spotPrice / strike);
+    const float xLogTerm = std::log(spotPrice / strike);
     const float xPowerTerm = 0.5f * volatility * volatility;
 
-    float xD1 = (rate + xPowerTerm) * time + xLogTerm;
     const float xDen = volatility * xSqrtTime;
-    xD1 = xD1 / xDen;
+    const float invXDen = 1.0f / xDen;
+
+    const float xD1 = (xLogTerm + (rate + xPowerTerm) * time) * invXDen;
     const float xD2 = xD1 - xDen;
 
-    float d1 = xD1;
-    float d2 = xD2;
-    float NofXd1 = 0.0f;
-    float NofXd2 = 0.0f;
+    const float NofXd1 = CNDF_stu_fast(xD1);
+    const float NofXd2 = CNDF_stu_fast(xD2);
 
-    CNDF_stu(d1, NofXd1);
-    CNDF_stu(d2, NofXd2);
+    const float FutureValueX = strike * fast_exp_small(-rate * time);
 
-    const float exp_val = -(rate) * (time);
-    const float exp_taylor = 1 + exp_val + (exp_val * exp_val) / 2;
-    const float FutureValueX = strike * exp_taylor;
-    // const float FutureValueX = strike * std::exp(-(rate) * (time));
-    CallOptionPrice = (spotPrice * NofXd1) - (FutureValueX * NofXd2);
+    CallOptionPrice = spotPrice * NofXd1 - FutureValueX * NofXd2;
 
+    #if 1 // Put-call parity formula: P = C - S + K*e^(-rt)
+    PutOptionPrice = CallOptionPrice - spotPrice + FutureValueX;
+    #endif
+
+    #if 0 // old way from naive, slower
     const float NegNofXd1 = 1.0f - NofXd1;
     const float NegNofXd2 = 1.0f - NofXd2;
-    PutOptionPrice = (FutureValueX * NegNofXd2) - (spotPrice * NegNofXd1);
+    PutOptionPrice = FutureValueX * NegNofXd2 - spotPrice * NegNofXd1;
+    #endif
 }
 
 void naive_BlkSchls(std::vector<float> &CallOptionPrice,
@@ -196,21 +188,50 @@ void stu_BlkSchls(std::vector<float> &CallOptionPrice,
                   const std::vector<float> &rate,
                   const std::vector<float> &volatility,
                   const std::vector<float> &time) {
+    const size_t n = spotPrice.size();
 
-    #if 1
-    size_t n = spotPrice.size();
+    #if 1 // multithread
+    size_t num_threads = std::thread::hardware_concurrency();
+    if (num_threads == 0) {
+        num_threads = 4;
+    }
+    num_threads = std::min(num_threads, n); // clamp at n maximum
+    size_t n_per_thread = n / num_threads;
+    std::vector<std::thread> threads;
+    threads.reserve(num_threads);
 
-    parallel_for(0, n, [&](size_t st, size_t en) {
-        for (size_t i = st; i < en; ++i) {
-            stu_BlkSchls_one(CallOptionPrice[i],
-                            PutOptionPrice[i],
-                            spotPrice[i],
-                            strike[i],
-                            rate[i],
-                            volatility[i],
-                            time[i]);
-        }
-    });
+    for (size_t t = 0; t < num_threads; t++){
+        size_t start_i = t * n_per_thread;
+        size_t end_i = (t == num_threads-1) ? n : (t + 1) * n_per_thread;
+        
+        threads.emplace_back([&, start_i, end_i](){
+            for (size_t i = start_i; i < end_i; ++i) {
+                stu_BlkSchls_one_fast(CallOptionPrice[i],
+                                      PutOptionPrice[i],
+                                      spotPrice[i],
+                                      strike[i],
+                                      rate[i],
+                                      volatility[i],
+                                      time[i]);
+            }
+        });
+    }
+    for (auto &t : threads) {
+        t.join();
+    }
+    #endif
+
+
+    #if 0 // basic
+    for (size_t i = 0; i < n; ++i) {
+        stu_BlkSchls_one_fast(CallOptionPrice[i],
+                              PutOptionPrice[i],
+                              spotPrice[i],
+                              strike[i],
+                              rate[i],
+                              volatility[i],
+                              time[i]);
+    }
     #endif
 }
 
