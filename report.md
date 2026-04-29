@@ -21,8 +21,44 @@ the problem here is the cache misses caused by data arrangement. Original SoA fo
 - reformatting the data into AoS format as an array of `struct pixel`s (each containing index `i` of all channels) helps but the channels contiguously near each other when we access index `i` so that we just need to trigger one miss for `a` and all other channels at that index are available to us <!-- TODO is this right? -->
 
 ## blackscholes
-the apparent bottleneck is the exponent, log functions that may take a long time to compute, plus some data dependence stalls
-- since `stu_BlkSchls` calls other functions in a loop, it is important to optimize every iteration by optimizing the functions that were called in the loop body.
-- replacing log and exponent by their respective taylor series (1/ln10 constant multiplied to ln() taylor series) gives us a much faster way to compute a good-enough approximation of the true value
-- also optimized `CNDF()` by converting an unnecessary data-dependent operation into an expression that the compiler could optimize further (maybe by using vectorization reduction): `float local = k * coefficient_a1 + k_2 * coefficient_a2 + k_3 * coefficient_a3 + k_4 * coefficient_a4 + k_5 * coefficient_a5;`
+this kernel's optimization lie mainly in simplifying or approximating the mathematical expressions but it's really hard.
+- first, I noticed that there was a long chain of data dependence so I transformed it in a way that would allow the compiler to maybe parallelize it in someway. This did speed up a little bit approximately from 0.6x to 0.8x
+```cpp
+// before
+    float local = k * coefficient_a1;
+    local += k_2 * coefficient_a2;
+    local += k_3 * coefficient_a3;
+    local += k_4 * coefficient_a4;
+    local += k_5 * coefficient_a5;
+    local = 1.0f - local * xNPrimeofX;
+// after
+    float local = k * coefficient_a1
+    + k_2 * coefficient_a2
+    + k_3 * coefficient_a3
+    + k_4 * coefficient_a4
+    + k_5 * coefficient_a5;
+    local = 1.0f - local * xNPrimeofX;
+```
+- all operations were done in `float` so I tried to add `f` suffixes to the macros and the speedup got to 1x
+- then I learned about Horner polynomial expressions and how it can really reduce the number of multiplications we have been doing for `k, k*k, k*k*k, ...` and tried that
+```cpp
+// k(a_1 + k(a_2 + k(a_3 + k(a_4 + k(a_5)))))
+const float k = 1.0f / (1.0f + p_val * x);
 
+    float poly = coefficient_a5;
+    poly = poly * k + coefficient_a4;
+    poly = poly * k + coefficient_a3;
+    poly = poly * k + coefficient_a2;
+    poly = poly * k + coefficient_a1;
+    poly = poly * k;
+```
+- for the student CNDF function I also didn't understand why we were overwriting a referenced value instead of returning so I tried returning a value and it got faster. I'm not sure how C++ handles references as compared to pointers but maybe aliasing or load/store could have a role that affected the speed previously
+- also, doing `xD1/xDen` after computing `xD1` is somehow slow. Replacing it by multiplying `invXDen` while computing final value of `xD1` is faster by a bit maybe because of scheduling dependencies
+- the naive way used `inline` keyword for helpers so I also used that, and without it, the speedup got worse. So I guess inlining can help the compiler see more opportunities of what to optimize, also since we're calling the helper functions multiple times because of loop, minimizing the function overhead is a good thing
+- for approximating `exp, log` using Taylor series I naively tried replacing them with four terms of the series and the output was totally wrong, so I tried more terms and still not good. I gave up on this approach but realized one part of the code had `exp(-rate*time)` where `rate, time` ranges `[0.0275,0.1], [0.1,1]` respectively and thus their product magnitude is close to zero. Finally, I can use an easy way to approximate using Taylor series but I still give up on other ones because I really have no idea
+```cpp
+// this is the taylor series of e^x but I expressed the polynomial using Horner since it is amazing to reduce the number of multiplications
+return 1.0f + x * (1.0f + x * (0.5f + x * ((1.0f / 6.0f) + x * ((1.0f / 24.0f) + x * (1.0f / 120.0f))))); 
+// also is an inline function for the same reasons of optimization
+```
+- I asked around for any more optimization techniques that I could understand and that actually work and one that worked is called Put-call Parity though I can't really understand why it's true since I don't do options trading analysis. Anyway, using this formula the speedup increased by 1x. Even though I didn't need to make this optimization, just wanted to make the speedup a nice looking number

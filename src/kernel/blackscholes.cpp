@@ -71,59 +71,31 @@ void CNDF(float &InputX, float &OutputX) {
     OutputX = sign ? (1.0f - local) : local;
 }
 
-static inline float fast_exp_range_reduced(float x) {
-    // Intended for x <= 0, especially for exp(-0.5f * d * d)
-
-    if (x < -18.0f) {
-        return 0.0f;
-    }
-
-    constexpr float log2e = 1.44269504089f; // 1 / ln(2)
-    constexpr float ln2 = 0.69314718056f;
-
-    // For x <= 0, this gives a decent nearest integer.
-    const int n = static_cast<int>(x * log2e - 0.5f);
-
-    const float r = x - static_cast<float>(n) * ln2;
-
-    // exp(r), with r roughly near 0.
-    float p = 1.0f / 120.0f;
-    p = p * r + 1.0f / 24.0f;
-    p = p * r + 1.0f / 6.0f;
-    p = p * r + 0.5f;
-    p = p * r + 1.0f;
-    p = p * r + 1.0f;
-
-    return std::ldexp(p, n);
-}
-
-static inline float fast_exp_small(float x) {
-    // Good for x near 0, especially around [-0.1, 0].
+static inline float fast_exp_small(float x) { // near zero values
     return 1.0f +
            x * (1.0f +
                 x * (0.5f + x * ((1.0f / 6.0f) +
                                  x * ((1.0f / 24.0f) + x * (1.0f / 120.0f)))));
 }
 
-static inline float CNDF_stu_fast(float input) {
-    float x = input;
+static inline float CNDF_stu_fast(float InputX) {
+    float x = InputX;
     const bool negative = x < 0.0f;
 
-    x = std::abs(x);
+    x = std::abs(x); // I believe in speed of STL
 
-    const float pdf = std::exp(-0.5f * x * x) * inv_sqrt_2xPI;
+    const float xNPrimeofX = std::exp(-0.5f * x * x) * inv_sqrt_2xPI;
     const float k = 1.0f / (1.0f + p_val * x);
 
-    float poly = coefficient_a5;
-    poly = poly * k + coefficient_a4;
-    poly = poly * k + coefficient_a3;
-    poly = poly * k + coefficient_a2;
-    poly = poly * k + coefficient_a1;
-    poly = poly * k;
+    float local = coefficient_a5;
+    local = local * k + coefficient_a4;
+    local = local * k + coefficient_a3;
+    local = local * k + coefficient_a2;
+    local = local * k + coefficient_a1;
+    local = local * k;
 
-    const float cdf = 1.0f - pdf * poly;
-
-    return negative ? 1.0f - cdf : cdf;
+    const float output = 1.0f - xNPrimeofX * local;
+    return negative ? (1.0f - output) : output;
 }
 
 static inline void naive_BlkSchls_one(float &CallOptionPrice,
@@ -134,8 +106,8 @@ static inline void naive_BlkSchls_one(float &CallOptionPrice,
     const float xLogTerm = std::log(spotPrice / strike);
     const float xPowerTerm = 0.5f * volatility * volatility;
 
-    float xD1 = (rate + xPowerTerm) * time + xLogTerm;
     const float xDen = volatility * xSqrtTime;
+    float xD1 = (rate + xPowerTerm) * time + xLogTerm;
     xD1 = xD1 / xDen;
     const float xD2 = xD1 - xDen;
 
@@ -162,35 +134,31 @@ static inline void stu_BlkSchls_one_fast(float &CallOptionPrice,
                                          float rate,
                                          float volatility,
                                          float time) {
-    const float sqrtTime = std::sqrt(time);
-    const float logTerm = std::log(spotPrice / strike);
+    const float xSqrtTime = std::sqrt(time);
+    const float xLogTerm = std::log(spotPrice / strike);
+    const float xPowerTerm = 0.5f * volatility * volatility;
 
-    const float vol2 = volatility * volatility;
-    const float powerTerm = 0.5f * vol2;
+    const float xDen = volatility * xSqrtTime;
+    const float invXDen = 1.0f / xDen;
 
-    const float den = volatility * sqrtTime;
-    const float invDen = 1.0f / den;
+    const float xD1 = (xLogTerm + (rate + xPowerTerm) * time) * invXDen;
+    const float xD2 = xD1 - xDen;
 
-    const float d1 = ((rate + powerTerm) * time + logTerm) * invDen;
-    const float d2 = d1 - den;
+    const float NofXd1 = CNDF_stu_fast(xD1);
+    const float NofXd2 = CNDF_stu_fast(xD2);
 
-    const float Nd1 = CNDF_stu_fast(d1);
-    const float Nd2 = CNDF_stu_fast(d2);
+    const float FutureValueX = strike * fast_exp_small(-rate * time);
 
-    const float futureValueStrike = strike * fast_exp_small(-rate * time);
+    CallOptionPrice = spotPrice * NofXd1 - FutureValueX * NofXd2;
 
-    CallOptionPrice = spotPrice * Nd1 - futureValueStrike * Nd2;
-
-    #if 1 // TODO required for speed
-    // Put-call parity:
-    // P = C - S + K*e^(-rt)
-    PutOptionPrice = CallOptionPrice - spotPrice + futureValueStrike;
+    #if 1 // Put-call parity formula: P = C - S + K*e^(-rt)
+    PutOptionPrice = CallOptionPrice - spotPrice + FutureValueX;
     #endif
 
-    #if 0
-    const float negNd1 = 1.0f - Nd1;
-    const float negNd2 = 1.0f - Nd2;
-    PutOptionPrice = futureValueStrike * negNd2 - spotPrice * negNd1;
+    #if 0 // old way from naive, slower
+    const float NegNofXd1 = 1.0f - NofXd1;
+    const float NegNofXd2 = 1.0f - NofXd2;
+    PutOptionPrice = FutureValueX * NegNofXd2 - spotPrice * NegNofXd1;
     #endif
 }
 
