@@ -165,7 +165,6 @@ void naive_image_proc(image_proc_args& args) {
 // -------------------------------------------------------------------------
 // TODO: Student Implementation
 // -------------------------------------------------------------------------
-//! inline Complex Mask and Importance Weighting
 void stu_image_proc(image_proc_args& args) {
     const size_t w = args.width;
     const size_t h = args.height;
@@ -216,7 +215,7 @@ void stu_image_proc(image_proc_args& args) {
     });
     #endif
 
-    // multithreading, originalyl written by geo
+    // multithreading, original written by geo
     #if 0
     unsigned int num_threads = std::thread::hardware_concurrency();
     if (num_threads == 0) num_threads = 4;

@@ -162,7 +162,6 @@ void naive_image_proc(image_proc_args& args) {
 // -------------------------------------------------------------------------
 // TODO: Student Implementation
 // -------------------------------------------------------------------------
-//! inline Complex Mask and Importance Weighting
 void stu_image_proc(image_proc_args& args) {
     const size_t w = args.width;
     const size_t h = args.height;
