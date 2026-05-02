@@ -1,8 +1,11 @@
+<!-- TODO make this a PDF format!!! -->
+<!-- TODO also, my CMAKELISTS.txt is not working?? -->
+
 ## Team Information
 - Bryan Edelson - 124040016
 - Geoffrey Mikhael - 124040051
 
-Grading distrubution: same score for both of us
+Grading distribution: same score for both of us
 
 ## Note
 Please note that we did not try to mitigate page fault impacts here. So, at times, the first iteration of each kernel might have significantly slower execution time. This makes the average execution time of each kernel slower (even slower than baseline for some). We hope the grader will evaluate our kernels multiple times.
@@ -127,13 +130,14 @@ The final implementation is that I used one vector for `A_prime` (I named it as 
 Without a vector, I would need to recompute `A` for both the current iteration and previous iteration, which results in computation redudancy. So, it's better to just precompute and store in a vector.
 
 ### sparse_spmm.cpp
-`perf` showed that accessing `bt_row[csr.col_idx[p]]` had 70% miss rate (likely because `csr.col_idx[p]` gives values that jump around), so the problem lies in this line. Accesses to sparse matrix don't usually cause cache misses because the CSR format made the data sequential and contiguous so we focus on improving the random stride access of `bt_row`. One way is to increase reuse of the `bt_row` after we loaded it into memory, so that we atleast benefit from the miss overhead.
+let `k=csr.col_idx[p]`:
+`perf` showed that accessing `bt_row[k]` had 70% miss rate (likely because `k`'s values jump around randomly), so the problem lies in this line. Accesses to sparse matrix don't usually cause cache misses because the CSR format made the data sequential and contiguous so we focus on improving the random stride access of `bt_row[k]`. One way is to increase reuse of the entire `bt_row` after we loaded it into memory, so that we atleast benefit from the miss overhead.
 - `bt_row` is the column of dense matrix B, this needs to be multiplied (dot product) with every row in A to produce a value in the resulting matrix
-- naive implementation iterates through rows of A first then loads `bt_row`, loading multiple columns of B to multiply with a row of A. Each load of `bt_row` accesses the `bt_row[k]` with a `k` that is not sequential because it jumps according to the location of A's nonzero values given by the CSR format
-- thus our initial accesses to `bt_row` are likely all cache misses since the strides are likely not cache-friendly so that's why we better not trigger these misses again in the future by reusing the `bt_row` loaded and iterating over all rows of A
-- our implementation iterates through dense_cols of B first then rows of A, because we have already paid the random access memory load price for `bt_row` once and want to maximize using it before we throw it away
+- naive implementation iterates through rows of A first then loads `bt_row`, loading multiple columns of B to multiply with a row of A. Each load of `bt_row` accesses the `bt_row[k]` with a `k` that is not sequential because it jumps according to the location of A's nonzero values given by the CSR format, then the next load throws away the `bt_row` that is already in cache and moves on to a different `bt_row`
+- thus our initial accesses to `bt_row[k]` are likely all cache misses since the strides are likely not cache-friendly so that's why we better not trigger these misses again in the future by reusing the entire `bt_row` we just loaded and iterating over all rows of A instead
+- our implementation iterates through dense_cols of B first then rows of A, because we have already paid the random access memory load price for `bt_row[k]` accesses so now our cache is filled with elements from this `bt_row` so we should maximize using it before we throw it away
 - we keep `bt_row` (the column of dense matrix B) in cache while we perform dot product with all rows of A, this doesn't necessarily cause cache misses when accessing rows of A since the CSR format stores values contiguously
-- this implementation is much better because otherwise one row of A would trigger a lot of `bt_row` cache misses, then the next row of A also does the same, and it even reloads `bt_row` that was possibly evicted out of the cache. Such a waste
+- this implementation is much better because otherwise one row of A would trigger a lot of `bt_row[k]` cache misses for multiple `bt_row`s, then the next row of A also does the same, and it may even reload `bt_row` that was previously evicted out of the cache. Such a waste
 
 ### image_proc.cpp
 there are many function calls here and the task is to inline when possible, especially since they are called within a nested loop so that means a lot of function call overhead. Systematically inlining, one by one, reveals that inlining all the functions gave the best performance. This aligns with the theory learned in lecture.
@@ -147,6 +151,19 @@ there are many function calls here and the task is to inline when possible, espe
 the problem here is the cache misses caused by data arrangement. Original SoA format places each channel of the image super far away from each other and inside the loop we access all channels at an index.
 - this means accessing each channel would have high chance of being a cache miss and this happens to all channels
 - reformatting the data into AoS format as an array of `struct pixel`s (each containing index `i` of all channels) helps bring the channels contiguously near each other when we access index `a[i]` of the AoS so that we just need to trigger one miss for `a[i]` and all other channels at that index `i` are available to us
+- the conversion function is called from `run_all.cpp` when initializing the benchmark arguments for `filter_gradient_stu` (outside the student implementation function as requested by the PDF), please be aware of this during grading to avoid errors
+    ```cpp
+    const std::size_t WIDTH = 1024;
+    const std::size_t HEIGHT = 1024;
+    filter_gradient_args filter_gradient_args_ref;
+    initialize_filter_gradient(&filter_gradient_args_ref, WIDTH, HEIGHT, seed);
+    // conversion of data structure for stu only
+    std::vector<pixel> target{}; // resized inside convert function
+    convert_data_struct(WIDTH, HEIGHT, filter_gradient_args_ref.data, target);
+    filter_gradient_args filter_gradient_args_stu = filter_gradient_args_ref;
+    filter_gradient_args_stu.converted_data = target;
+    std::cout << "\tFilter Gradient: " << HEIGHT << " x " << WIDTH << '\n';
+    ```
 
 ### blackscholes.cpp
 this kernel's optimization lie mainly in simplifying or approximating the mathematical expressions but it's really hard.
@@ -190,8 +207,7 @@ this kernel's optimization lie mainly in simplifying or approximating the mathem
     return 1.0f + x * (1.0f + x * (0.5f + x * ((1.0f / 6.0f) + x * ((1.0f / 24.0f) + x * (1.0f / 120.0f))))); 
     // also is an inline function for the same reasons of optimization
     ```
-- I asked around for any more optimization techniques that I could understand and that actually work and one that worked is called Put-call Parity though I can't really understand why it's true since I don't do options trading analysis. Anyway, using this formula the speedup increased by 1x. Even though I didn't need to make this optimization, just wanted to make the speedup attain a nice looking number (1.4x instead of 1.3x)
-
+- I asked around for any more optimization techniques that looked easy to implement and which actually worked and one is called Put-call Parity though I can't really understand why it's true since I don't do options trading analysis. Anyway, using this formula the speedup increased by 1x. Even though I didn't need to make this optimization, just wanted to make the speedup attain a nice looking number (1.4x instead of 1.3x)
 
 ## Bonus Implementation
 Final result:
@@ -233,15 +249,28 @@ Added custom flags and multithreaded the final loop. The reason I tried it was b
 As a result, the speedup is now around 3.3x.
 
 ### sparse_spmm.cpp
+Just multithreaded it using the thread wrapper helper function plus custom flags. Each thread generally shares the same `bt_row` and iterates through their own restricted range of rows of A. This was the approach that worked best.
+- I tried giving each thread their own different `bt_row` ranges and then they all iterate over all rows of A but the speedup got worse maybe because sharing improves cache utilization
+- Since `bt_row` is random access with heavy reuse, better let first thread load miss it, then other threads likely have it in cache when they need
+- My earlier direction would mean that each thread uses different `bt_row`s so all the loads will miss because the threads don't reuse each other's `bt_row` which is wasteful so it was aborted
+- Streamed access of stride 1 to rows of A at mutually exclusive ranges from different threads is fine because CSR is contiguous so it already benefits from spatial locality (next element needed is brought into cache because of being in the same cache line or hardware prefetched it for us), thus we just focus on how to reuse `bt_row` as much as possible which leads to our implementation
 
 ### image_proc.cpp
+Just multithreaded it using the thread wrapper helper function plus custom flags.
+- each iteration only depends on index `i` so the computation is independent and can easily be parallelized by multithreading
 
 ### filter_gradient.cpp
+Just multithreaded it using the thread wrapper helper function plus custom flags.
+- the original multithread implementation used a `vector` to store the partial sums before later summing the contents to be the final result
+- then we wanted to try using the helper function created but there was an error because the threads were racing to `emplace_back` the `vector` hence we switched to using an `atomic<double>` for the threads to accumulate into after computing their own `local_sum` in registers
 
 ### blackscholes.cpp
+Since the operations just depend on index `i` of the argument arrays, it is natural for us to multithread the outermost loop.
+- we can't really use the helper function here because we need clamping of `num_threads = std::min(num_threads, n); // clamp at n maximum`
+- without the clamping the performance didn't improve which was odd at first but turned out to be because this expression `size_t n_per_thread = n / num_threads;` returned zero for `n_per_thread` if `num_threads` was greater than `n` by integer division, making the last thread to all the work and all previous threads pointless
 
 ## Acknowledgements
 - Bryan's chat with DeepSeek: https://chat.deepseek.com/share/6d3l8315wk0h3oufc4
-- Geo's chat: <!-- TODO -->
+- Geo's chat with DeepSeek: https://chat.deepseek.com/share/jvxg9mfzs7u5r2kzr7
 
 The PDF version of the chat can also be found in the submission.
