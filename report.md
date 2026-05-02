@@ -81,7 +81,7 @@ __builtin_prefetch(&records[trace[i + dist]], 0, 2)
 ```
 I tried different values of `dist`. I forgot the exact value of `dist` that achieved the best result for me. But, it was within the baseline already.
 
-Additional, I observed that the function `trace_replay_cost()` is called repeatedly in the trace loop. The naive version requires it to recompute the cost everytime, but there may be some records that appear multiple times in the trace. So, it's better to have some sort of lookup table for better temporal locality.
+Additionally, I observed that the function `trace_replay_cost()` is called repeatedly in the trace loop. The naive version requires it to recompute the cost everytime, but there may be some records that appear multiple times in the trace. So, it's better to have some sort of lookup table for better temporal locality.
 
 So, what I did further was to:
 - Iterate through `records` sequentially. This promotes good spatial locality.
@@ -239,6 +239,6 @@ As a result, the speedup is now around 3.3x.
 
 ## Acknowledgements
 - Bryan's chat with DeepSeek: https://chat.deepseek.com/share/6d3l8315wk0h3oufc4
-- Geo's chat:
+- Geo's chat: <!-- TODO -->
 
 The PDF version of the chat can also be found in the submission.
