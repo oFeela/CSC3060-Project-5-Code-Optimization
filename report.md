@@ -47,7 +47,7 @@ But, I also tried to explore how to maybe use bitmask operations to do this. Let
 - First thought is that It's probably something to do with the sign bit.
 - Case 1: if $a\geq0$, then the sign bit is $0$. The objective is to retain the value of $a$. So, by forcing myself to use the sign bit as a mask, what I did was just try to perform a logical right shift and make the masking bits to be all 0.
 - Case 2: if $a<0$, then the sign bit is $1$. The objective is to make the final value of $0$. By doing logical right shift on the sign bit mask, the mask becomes all 1.
-- Then, the final operation of $\&$ (logical and) is perfect to handle this. Just make the negate the mask and so if the mask is all 1, then the value is retained. If the mask is all 0, the final value becomes zero.
+- Then, the final operation of & (logical and) is perfect to handle this. Just make the negate the mask and so if the mask is all 1, then the value is retained. If the mask is all 0, the final value becomes zero.
 - Thus, the final expression is: `a & ~(a >> 31)`.
 - Since the input is a float (32 bits), all I had to do was just try to directly operate on its bits by making a reference to it, which can be done by `*(int32_t*)&a` (typecast the address of $a$ as an integer pointer, and then dereference it to be stored as a `int32_t&`).
 - The speedup was similar to `std::max()`, and most importantly is still within the baseline value.
