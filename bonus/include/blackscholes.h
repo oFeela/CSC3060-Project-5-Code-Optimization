@@ -7,6 +7,7 @@
 #include <vector>
 
 const std::chrono::nanoseconds BASELINE_BLACKSCHOLES{4800000};
+inline constexpr double NAIVE_SPEEDUP_LOWER_BOUND_BLACKSCHOLES{1.35};
 
 struct blackscholes_args {
     std::vector<float> call_option_price;
@@ -26,9 +27,6 @@ void initialize_blackscholes(blackscholes_args &args,
 
 /* Cumulative Normal Distribution Function */
 void CNDF(float &InputX, float &OutputX);
-
-/* CNDF student version */
-void CNDF_stu(float &InputX, float &OutputX);
 
 void naive_BlkSchls(std::vector<float> &CallOptionPrice,
                     std::vector<float> &PutOptionPrice,

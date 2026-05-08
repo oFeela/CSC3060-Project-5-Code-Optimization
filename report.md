@@ -12,9 +12,11 @@ Please note that we did not try to mitigate page fault impacts here. So, at time
 
 For some codes, there will be an `#if 1` wrapper, which indicates which part we actually use. Please ignore ones that have `#if 0`.
 
+We also use the BASELINE speedup as our main optimization objective.
+
 ## Basic Implementation
 Final result:
-![](bec785e9c5d893c04778f1c0b658009e.png)
+![](image.png)
 
 ### bitwise.cpp
 Immediately after seeing how the naive implementation performs the task (one int8 for each iteration), the first approach is to just combine multiple int8 as one big integer. So, this is exactly what I did by using uint128_t (or int128_t, it doesn't matter because no right shift operations).
@@ -211,7 +213,7 @@ this kernel's optimization lie mainly in simplifying or approximating the mathem
 
 ## Bonus Implementation
 Final result:
-![](4edcda774fb3548b6ce932b8f5dfb61d.png)
+![](image-1.png)
 
 We created a new header file called `helpers.h`, which consists of one helper function `parallel_for(st, en, Func&&)`. The reason is just for easy multithreading via `std::thread`. Some kernels are inherently not worth to multithread due to the the overhead of managing threads.
 

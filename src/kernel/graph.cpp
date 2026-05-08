@@ -50,31 +50,21 @@ void initialize_graph(graph_args* args,
     args->out = 0;
 }
 
-void initialize_optimized_graph(graph_args* args) {
-    args->opt_graph.n = args->graph.n;
-    args->opt_graph.m = args->edge_storage.size();
-    args->opt_graph.offsets.resize(args->opt_graph.n + 1); // one extra as a dummy
-    args->opt_graph.edge_dests.resize(args->opt_graph.m);
-
-    // THESE ARE NOT USED!!!
-    args->opt_graph.sum.resize(args->opt_graph.n);
-    args->opt_graph.tot_sum = 0;
+void convert_graph_to_csr(OptimizedGraph& graph_csr, const Graph& graph_stu) {
+    graph_csr.n = graph_stu.n;
+    graph_csr.offsets.resize(graph_csr.n + 1); // one extra as a dummy
 
     int edge_idx = 0;
-    for (int i = 0; i < args->opt_graph.n; i++) {
-        args->opt_graph.offsets[i] = edge_idx;
-        Edge* e = args->nodes[i].edges;
-        int sum = 0;
+    for (int i = 0; i < graph_csr.n; i++) {
+        graph_csr.offsets[i] = edge_idx;
+        Edge* e = graph_stu.nodes[i].edges;
         while (e != nullptr) {
-            args->opt_graph.edge_dests[edge_idx] = e->to;
-            sum += e->to;
+            graph_csr.edge_dests.push_back(e->to);
             e = e->next;
             edge_idx++;
         }
-        args->opt_graph.sum[i] = sum;
-        args->opt_graph.tot_sum += static_cast<uint64_t>(sum);
     }
-    args->opt_graph.offsets[args->opt_graph.n] = edge_idx;
+    graph_csr.offsets[graph_csr.n] = edge_idx;
 }
 
 void naive_graph(std::uint64_t& out, const Graph& graph) {
@@ -121,7 +111,7 @@ void naive_graph_wrapper(void* ctx) {
 
 void stu_graph_wrapper(void* ctx) {
     auto& args = *static_cast<graph_args*>(ctx);
-    stu_graph(args.out, args.opt_graph);
+    stu_graph(args.out, args.graph_csr);
 }
 
 bool graph_check(void* stu_ctx, void* ref_ctx, lab_test_func naive_func) {

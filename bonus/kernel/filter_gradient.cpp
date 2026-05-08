@@ -124,15 +124,14 @@ void naive_filter_gradient(float& out, const data_struct& data,
     out = total;
 }
 
-void convert_data_struct(std::size_t width, std::size_t height, 
-    const data_struct &data, std::vector<pixel> &new_data)
+void convert_soa_to_aos(std::vector<pixel> &new_data, const data_struct &old_data)
 {
-    std::size_t count = height*width;
+    std::size_t count = old_data.a.size();
     new_data.resize(count);
     for (std::size_t i = 0; i < count; ++i){
         new_data[i] = pixel(
-            data.a[i], data.b[i], data.c[i], data.d[i],
-            data.e[i], data.f[i], data.g[i], data.h[i], data.i[i]
+            old_data.a[i], old_data.b[i], old_data.c[i], old_data.d[i],
+            old_data.e[i], old_data.f[i], old_data.g[i], old_data.h[i], old_data.i[i]
         );
     }
 }
@@ -337,7 +336,7 @@ void naive_filter_gradient_wrapper(void* ctx) {
 void stu_filter_gradient_wrapper(void* ctx) {
     auto& args = *static_cast<filter_gradient_args*>(ctx);
     args.out = 0.0f;
-    stu_filter_gradient(args.out, args.converted_data, args.width, args.height);
+    stu_filter_gradient(args.out, args.aos_data, args.width, args.height);
 }
 
 bool filter_gradient_check(void* stu_ctx, void* ref_ctx, lab_test_func naive_func) {

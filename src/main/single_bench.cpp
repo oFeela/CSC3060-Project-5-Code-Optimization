@@ -47,19 +47,19 @@
     // std::cout << "\tTrace Replay: records=" << trace_args_naive.records.size()
     //           << ", trace_length=" << trace_args_naive.trace.size() << '\n';
 
-    const std::size_t WIDTH = 1024;
-    const std::size_t HEIGHT = 1024;
-    filter_gradient_args filter_gradient_args_ref;
-    initialize_filter_gradient(&filter_gradient_args_ref,
-                               WIDTH,
-                               HEIGHT,
-                               seed);
-    // conversion of data structure for stu only
-    std::vector<pixel> target{}; // resized inside convert function
-    convert_data_struct(WIDTH, HEIGHT, filter_gradient_args_ref.data, target);
-    filter_gradient_args filter_gradient_args_stu = filter_gradient_args_ref;
-    filter_gradient_args_stu.converted_data = target;
-    std::cout << "\tFilter Gradient: " << HEIGHT << " x " << WIDTH << '\n';
+    // const std::size_t WIDTH = 1024;
+    // const std::size_t HEIGHT = 1024;
+    // filter_gradient_args filter_gradient_args_ref;
+    // initialize_filter_gradient(&filter_gradient_args_ref,
+    //                            WIDTH,
+    //                            HEIGHT,
+    //                            seed);
+    // // conversion of data structure for stu only
+    // std::vector<pixel> target{}; // resized inside convert function
+    // convert_data_struct(WIDTH, HEIGHT, filter_gradient_args_ref.data, target);
+    // filter_gradient_args filter_gradient_args_stu = filter_gradient_args_ref;
+    // filter_gradient_args_stu.converted_data = target;
+    // std::cout << "\tFilter Gradient: " << HEIGHT << " x " << WIDTH << '\n';
 
     std::vector<bench_t> benchmarks = {
                 // {"ReLU (Optimized)",
@@ -97,13 +97,13 @@
                 // &trace_args_stu,
                 // &trace_args_naive,
                 // BASELINE_TRACE_REPLAY},
-                {"Filter Gradient (Optimized)",
-                 stu_filter_gradient_wrapper,
-                 naive_filter_gradient_wrapper,
-                 filter_gradient_check,
-                 &filter_gradient_args_stu,
-                 &filter_gradient_args_ref,
-                 BASELINE_FILTER_GRADIENT}
+                // {"Filter Gradient (Optimized)",
+                //  stu_filter_gradient_wrapper,
+                //  naive_filter_gradient_wrapper,
+                //  filter_gradient_check,
+                //  &filter_gradient_args_stu,
+                //  &filter_gradient_args_ref,
+                //  BASELINE_FILTER_GRADIENT}
     };
     std::cout << "\nRunning Benchmarks...\n";
     std::cout << "--------------------------------------------------------\n";

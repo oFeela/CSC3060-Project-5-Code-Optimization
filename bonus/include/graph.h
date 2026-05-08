@@ -8,6 +8,7 @@
 #include <vector>
 
 const std::chrono::nanoseconds BASELINE_GRAPH{5000000};
+inline constexpr double NAIVE_SPEEDUP_LOWER_BOUND_GRAPH{2.50};
 
 struct Edge {
     int to;
@@ -23,30 +24,12 @@ struct Graph {
     Node* nodes;
 };
 
-// struct OptimizedEdge {
-//     int w;
-//     int next;
-
-//     OptimizedEdge(int w, int next) : w(w), next(next) {}
-// };
-
 // Optimized graph
 struct OptimizedGraph {
     int n;
-    int m;
     // which edge index the i-th node starts at, and the end is before the edge index which the (i+1)-th node starts at
     std::vector<int> offsets; 
     std::vector<int> edge_dests; // size: m, which node the edge points to
-
-    // what if i just store the sum of edge_dists for each node immediately?
-    // NOT USED!!! it was just for experiment
-    std::vector<int> sum;
-    uint64_t tot_sum;
-
-    // my first approach:
-    // adjacency list
-    // std::vector<std::vector<OptimizedEdge>> adj;
-    // realized: might be too slow because not contiguous for the node traversal...
 };
 
 struct graph_args {
@@ -56,7 +39,7 @@ struct graph_args {
     std::uint64_t out;
     double epsilon;
     // TODO: You may want to add new params at the end...
-    OptimizedGraph opt_graph;
+    OptimizedGraph graph_csr;
 
     explicit graph_args(double epsilon_in = 1e-6)
         : graph{0, nullptr}, out{0}, epsilon{epsilon_in} {}
@@ -76,7 +59,7 @@ void initialize_graph(graph_args* args,
                        int avg_degree,
                        std::uint_fast64_t seed);
 
-void initialize_optimized_graph(graph_args* args);
+void convert_graph_to_csr(OptimizedGraph& graph_csr, const Graph& graph_stu);
 
 bool graph_check(void* stu_ctx, void* ref_ctx, lab_test_func naive_func);
 
